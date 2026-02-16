@@ -1,0 +1,82 @@
+# ============================================
+# PANOPTICUM — Configuration
+# ============================================
+# Edit this file to customize the installation.
+# No need to touch any Python code.
+
+# --- Camera ---
+camera:
+  index: 0                    # 0 = default camera, 1 = second camera, etc.
+  width: 1280                 # Capture resolution width
+  height: 720                 # Capture resolution height
+  fullscreen: false           # Display in fullscreen mode (press F to toggle)
+  mirror: false               # Mirror the image horizontally
+
+# --- Vision Model ---
+vision:
+  backend: "gemini"           # PRIMARY: "gemini" (API) or "ollama" (local fallback)
+
+  ollama:
+    model: "moondream"        # FALLBACK: local vision model
+    host: "http://localhost:11434"
+    timeout: 30               # Seconds to wait for a response
+
+  gemini:
+    api_key: ""               # Leave empty — set GEMINI_API_KEY in .env file instead
+    model: "gemini-2.0-flash"
+
+# --- Prompt (for vision model) ---
+prompt:
+  file: "prompts/surveillance.txt"   # Path to the prompt template
+  max_words: 40                       # Ask the model to keep responses under N words
+
+# --- Narrator ---
+# When backend=gemini: Gemini handles narration internally using prompt_file below.
+# When backend=ollama: Two-model pipeline (moondream → llama3.2:3b) uses narrator_prompt_file.
+narrator:
+  enabled: true                       # Set to false to use raw vision descriptions
+  model: "llama3.2:3b"               # Text LLM for Ollama fallback narration
+  host: "http://localhost:11434"      # Ollama server (same as vision)
+  timeout: 30                         # Seconds to wait for narrator response
+  prompt_file: "prompts/gemini_surveillance.txt"        # Gemini unified prompt
+  narrator_prompt_file: "prompts/narrator_surveillance.txt"  # Ollama narrator prompt
+  max_history: 10                     # Remember last N observations for context
+  max_words: 5                        # Ultra-terse: 2-5 word fragments
+  warmup_rounds: 3                    # Collect N observations silently before first narration
+  stale_timeout: 10                   # Force a scene description if silent for N seconds
+
+# --- Timing ---
+timing:
+  analysis_interval: 3        # Minimum seconds between analyses
+  overlay_duration: 8.0       # How long the text stays on screen
+  fade_in: 0.5                # Text fade-in duration (seconds)
+  fade_out: 1.5               # Text fade-out duration (seconds)
+
+# --- TTS (Text-to-Speech) ---
+tts:
+  backend: "edge-tts"         # "edge-tts" or "pyttsx3"
+
+  edge_tts:
+    voice: "en-US-GuyNeural"  # Neutral American male — more robotic feel
+    rate: "-15%"              # Slower, more deliberate
+    volume: "+0%"
+    pitch: "-15Hz"            # Deeper, more mechanical
+
+  pyttsx3:
+    rate: 140                 # Words per minute (default ~200)
+    volume: 0.9               # 0.0 to 1.0
+
+# --- Display Overlay ---
+overlay:
+  font_scale: 0.7             # OpenCV font scale
+  color: [0, 255, 0]          # BGR color — green = surveillance aesthetic
+  position: "bottom"          # "bottom", "top", or "center"
+  background_opacity: 0.6     # Dark background behind text (0.0–1.0)
+  show_timestamp: true        # Show timestamp like a security camera
+  show_recording_dot: true    # Blinking red dot in corner
+
+# --- Advanced ---
+advanced:
+  log_descriptions: true      # Save all AI descriptions to a log file
+  log_file: "panopticum_log.txt"
+  gpu_fallback_to_cpu: true   # If GPU fails, try CPU mode

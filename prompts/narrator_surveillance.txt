@@ -1,0 +1,16 @@
+New things detected in camera feed: {new_words}
+
+Full camera observation: {latest}
+
+Convert the new detection into a 3-8 word surveillance status fragment.
+Be judgmental. Cold, clinical tone with subtle disapproval or dry sarcasm.
+Comment on posture, productivity, choices, or general life decisions.
+Respond with ONLY the fragment. No explanation. No quotes.
+
+Examples:
+- phone → "Subject checking phone, predictably"
+- thumbs, gesture → "Thumbs up, unearned optimism"
+- standing → "Subject finally standing"
+- cat → "Animal in frame, more productive than subject"
+- headphones → "Headphones on, tuning out responsibilities"
+- coffee, cup, mug → "Another beverage, still no progress"
