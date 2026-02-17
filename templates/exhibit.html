@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANOPTICUM — Exhibition</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="exhibit-mode">
+    <div class="video-container">
+        <img src="/stream" alt="Live Feed">
+        <div class="scanlines"></div>
+        <div class="overlay">
+            <!-- Top bar -->
+            <div class="overlay-top">
+                <span class="timestamp" id="timestamp"></span>
+                <div class="rec-indicator">
+                    <span class="rec-dot" id="rec-dot"></span>
+                    <span>REC</span>
+                </div>
+            </div>
+
+            <!-- Camera label -->
+            <span class="cam-label">CAM-01</span>
+
+            <!-- Description -->
+            <div class="description-box" id="description-box"></div>
+
+            <!-- Audio indicator -->
+            <span class="audio-indicator" id="audio-indicator">[AUDIO]</span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -151,7 +151,7 @@ class GeminiVision:
         """Check if the response indicates no change."""
         return "NOCHANGE" in text.upper().replace("_", "").replace(" ", "")
 
-    def describe_and_narrate(self, jpeg_bytes: bytes) -> str | None:
+    def describe_and_narrate(self, jpeg_bytes: bytes, tone_preamble: str = "") -> str | None:
         """Single-call vision + narration with memory. Returns narration or None."""
         from google.genai import types
 
@@ -185,6 +185,10 @@ class GeminiVision:
             count=len(self.history),
             mode=mode_text,
         )
+
+        # Prepend tone modifier if provided
+        if tone_preamble:
+            prompt = tone_preamble + "\n" + prompt
 
         # Send image + prompt in one call
         response = self._call_gemini([

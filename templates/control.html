@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANOPTICUM</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="video-container">
+        <img src="/stream" alt="Live Feed">
+        <div class="scanlines"></div>
+        <div class="overlay">
+            <!-- Top bar -->
+            <div class="overlay-top">
+                <span class="timestamp" id="timestamp"></span>
+                <div class="rec-indicator">
+                    <span class="rec-dot" id="rec-dot"></span>
+                    <span>REC</span>
+                </div>
+            </div>
+
+            <!-- Camera label -->
+            <span class="cam-label">CAM-01</span>
+
+            <!-- Description -->
+            <div class="description-box" id="description-box"></div>
+
+            <!-- Audio indicator -->
+            <span class="audio-indicator" id="audio-indicator">[AUDIO]</span>
+        </div>
+    </div>
+
+    <!-- Controls panel -->
+    <div class="controls">
+        <div class="control-group">
+            <span class="control-label">Effect</span>
+            <button class="effect-btn active" data-effect="original">Original</button>
+            <button class="effect-btn" data-effect="cctv">CCTV</button>
+            <button class="effect-btn" data-effect="nightvision">Night Vision</button>
+            <button class="effect-btn" data-effect="noir">Noir</button>
+        </div>
+
+        <div class="control-group tone-slider-group">
+            <span class="control-label">Tone</span>
+            <div class="tone-slider-wrapper">
+                <input type="range" id="tone-slider" min="0" max="1" step="0.01" value="1.0">
+                <div class="tone-labels">
+                    <span>Flattering</span>
+                    <span>Neutral</span>
+                    <span>Judgmental</span>
+                </div>
+            </div>
+            <span id="tone-value" class="control-label" style="min-width: 80px; text-align: right;">JUDGMENTAL</span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

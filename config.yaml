@@ -4,6 +4,19 @@
 # Edit this file to customize the installation.
 # No need to touch any Python code.
 
+# --- Web Server ---
+server:
+  host: "0.0.0.0"              # Bind address (0.0.0.0 = all interfaces)
+  port: 8000                    # HTTP port
+
+# --- Video Effects ---
+effects:
+  default: "original"           # "original", "cctv", "nightvision", or "noir"
+
+# --- Tone ---
+tone:
+  default: 1.0                  # 0.0 = flattering, 0.5 = neutral, 1.0 = judgmental
+
 # --- Camera ---
 camera:
   index: 0                    # 0 = default camera, 1 = second camera, etc.

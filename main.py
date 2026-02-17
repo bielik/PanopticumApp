@@ -9,7 +9,8 @@ Usage:
     python main.py          # Run with config.yaml
     python main.py --help   # Show options
 
-Press ESC to quit.
+Open http://localhost:8000/ in a browser for controls.
+Open http://localhost:8000/exhibit for exhibition mode.
 """
 
 import logging
@@ -27,8 +28,10 @@ import cv2
 import numpy as np
 import yaml
 
+from effects import apply_effect
 from narrator import Narrator
-from overlay import create_no_signal_frame, draw_overlay
+from overlay import create_no_signal_frame
+from tone import build_tone_preamble
 from tts import create_tts_backend
 from vision import create_vision_backend, encode_frame
 
@@ -48,21 +51,90 @@ log = logging.getLogger("panopticum")
 # ---------------------------------------------------------------------------
 @dataclass
 class SharedState:
-    """Thread-safe shared state for the three execution paths."""
+    """Thread-safe shared state for all execution paths."""
 
     lock: threading.Lock = field(default_factory=threading.Lock)
 
-    # Main thread writes, analysis thread reads
+    # Camera thread writes, analysis thread reads
     latest_frame: Optional[np.ndarray] = None
     frame_ready: threading.Event = field(default_factory=threading.Event)
 
-    # Analysis thread writes, main + TTS threads read
+    # Camera thread writes, server reads (JPEG bytes for MJPEG stream)
+    display_frame_jpeg: Optional[bytes] = None
+    display_frame_event: threading.Event = field(default_factory=threading.Event)
+
+    # Analysis thread writes, TTS + server read
     latest_description: str = ""
     description_timestamp: float = 0.0
 
     # Control
     running: bool = True
     is_speaking: bool = False
+
+    # Web UI state
+    current_effect: str = "original"
+    tone_value: float = 1.0
+    tone_preamble: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Camera worker (runs in background thread)
+# ---------------------------------------------------------------------------
+def camera_worker(config, state: SharedState):
+    """Capture frames, apply effects, encode JPEG for web stream."""
+    cam_cfg = config["camera"]
+    cap = cv2.VideoCapture(cam_cfg["index"])
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+
+    if not cap.isOpened():
+        log.error(f"Cannot open camera index {cam_cfg['index']}")
+        return
+
+    log.info(f"Camera opened: index={cam_cfg['index']} ({cam_cfg['width']}x{cam_cfg['height']})")
+
+    try:
+        while state.running:
+            ret, frame = cap.read()
+
+            if not ret or frame is None:
+                # Camera disconnected — show static noise
+                frame = create_no_signal_frame(cam_cfg["width"], cam_cfg["height"])
+                # Try to reconnect
+                cap.release()
+                time.sleep(2)
+                cap = cv2.VideoCapture(cam_cfg["index"])
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+            else:
+                if cam_cfg["mirror"]:
+                    frame = cv2.flip(frame, 1)
+
+                # Share RAW frame with analysis thread (no effects)
+                with state.lock:
+                    state.latest_frame = frame.copy()
+                    state.frame_ready.set()
+
+            # Apply display effect and encode for web stream
+            with state.lock:
+                effect = state.current_effect
+
+            display_frame = apply_effect(frame, effect)
+            _, jpeg = cv2.imencode(".jpg", display_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            jpeg_bytes = jpeg.tobytes()
+
+            with state.lock:
+                state.display_frame_jpeg = jpeg_bytes
+                state.display_frame_event.set()
+
+            # Cap at ~30fps to avoid burning CPU
+            time.sleep(0.033)
+
+    except Exception as e:
+        log.error(f"Camera worker error: {e}", exc_info=True)
+    finally:
+        cap.release()
+        log.info("Camera released.")
 
 
 # ---------------------------------------------------------------------------
@@ -111,11 +183,17 @@ def analysis_worker(config, state: SharedState):
         if frame is None:
             continue
 
+        # Read current tone preamble
+        with state.lock:
+            tone_preamble = state.tone_preamble
+
         try:
             jpeg_bytes = encode_frame(frame)
 
             if use_unified:
-                narration = vision.describe_and_narrate(jpeg_bytes)
+                narration = vision.describe_and_narrate(
+                    jpeg_bytes, tone_preamble=tone_preamble
+                )
             else:
                 raw_description = vision.describe(jpeg_bytes)
 
@@ -290,7 +368,7 @@ def tts_worker(config, state: SharedState):
 
 
 # ---------------------------------------------------------------------------
-# Main loop (camera + display, runs on main thread)
+# Main entry point
 # ---------------------------------------------------------------------------
 def load_config(path: str = "config.yaml") -> dict:
     """Load configuration from YAML file."""
@@ -308,85 +386,53 @@ def load_config(path: str = "config.yaml") -> dict:
 
 def main():
     """Main entry point."""
+    import uvicorn
+    import server
+
     config = load_config()
     state = SharedState()
 
+    # Initialize tone from config defaults
+    default_tone = config.get("tone", {}).get("default", 1.0)
+    state.tone_value = default_tone
+    state.tone_preamble = build_tone_preamble(default_tone)
+
+    # Initialize effect from config defaults
+    state.current_effect = config.get("effects", {}).get("default", "original")
+
+    # Share state and config with the web server
+    server.state = state
+    server.config = config
+
     # Start worker threads (daemon = auto-stop when main thread exits)
+    camera_t = threading.Thread(
+        target=camera_worker, args=(config, state), daemon=True, name="camera"
+    )
     analysis_t = threading.Thread(
         target=analysis_worker, args=(config, state), daemon=True, name="analysis"
     )
     tts_t = threading.Thread(
         target=tts_worker, args=(config, state), daemon=True, name="tts"
     )
+    camera_t.start()
     analysis_t.start()
     tts_t.start()
 
-    # Open camera
-    cam_cfg = config["camera"]
-    cap = cv2.VideoCapture(cam_cfg["index"])
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+    # Run web server on main thread (blocking)
+    srv_cfg = config.get("server", {})
+    host = srv_cfg.get("host", "0.0.0.0")
+    port = srv_cfg.get("port", 8000)
 
-    if not cap.isOpened():
-        log.error(f"Cannot open camera index {cam_cfg['index']}")
-        sys.exit(1)
-
-    log.info(f"Camera opened: index={cam_cfg['index']} ({cam_cfg['width']}x{cam_cfg['height']})")
-
-    # Create display window
-    window_name = "PANOPTICUM"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    if cam_cfg["fullscreen"]:
-        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-    log.info("Running. Press ESC to quit.")
+    log.info(f"Starting web server at http://{host}:{port}")
+    log.info(f"  Control:    http://localhost:{port}/")
+    log.info(f"  Exhibition: http://localhost:{port}/exhibit")
 
     try:
-        while state.running:
-            ret, frame = cap.read()
-
-            if not ret or frame is None:
-                # Camera disconnected — show static
-                frame = create_no_signal_frame(cam_cfg["width"], cam_cfg["height"])
-                # Try to reconnect
-                cap.release()
-                time.sleep(2)
-                cap = cv2.VideoCapture(cam_cfg["index"])
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
-            else:
-                if cam_cfg["mirror"]:
-                    frame = cv2.flip(frame, 1)
-
-                # Share frame with analysis thread
-                with state.lock:
-                    state.latest_frame = frame.copy()
-                    state.frame_ready.set()
-
-            # Draw overlay and display
-            display_frame = draw_overlay(frame, state, config)
-            cv2.imshow(window_name, display_frame)
-
-            # Keyboard controls
-            key = cv2.waitKey(1) & 0xFF
-            if key == 27:  # ESC to quit
-                log.info("ESC pressed. Shutting down...")
-                state.running = False
-            elif key == ord('f') or key == ord('F'):  # Toggle fullscreen
-                prop = cv2.getWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN)
-                if prop == cv2.WINDOW_FULLSCREEN:
-                    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
-                    log.info("Switched to windowed mode")
-                else:
-                    cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                    log.info("Switched to fullscreen mode")
-
+        uvicorn.run(server.app, host=host, port=port, log_level="warning")
     except KeyboardInterrupt:
         log.info("Ctrl+C pressed. Shutting down...")
-        state.running = False
     finally:
-        cap.release()
-        cv2.destroyAllWindows()
+        state.running = False
         log.info("PANOPTICUM stopped.")
 
 

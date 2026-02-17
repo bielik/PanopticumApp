@@ -4,7 +4,10 @@ echo ==========================================
 echo   PANOPTICUM — Surveillance Art Installation
 echo ==========================================
 echo.
-echo Starting... Press ESC in the window to quit.
+echo Starting web server...
+echo Open http://localhost:8000/ for controls
+echo Open http://localhost:8000/exhibit for exhibition mode
+echo Press Ctrl+C to quit.
 echo.
 
 cd /d "%~dp0"
