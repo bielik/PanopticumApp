@@ -1,3 +1,12 @@
+---
+title: Panopticum
+emoji: 👁
+colorFrom: indigo
+colorTo: gray
+sdk: docker
+pinned: false
+---
+
 # PANOPTICUM
 
 An interactive surveillance art installation.
