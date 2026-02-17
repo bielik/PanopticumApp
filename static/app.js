@@ -114,6 +114,9 @@
         .then(function (data) {
             if (data.is_source) {
                 handleSourceChange(true);
+            } else {
+                // Not the source — show MJPEG stream (deferred to avoid broken image flash)
+                showMjpegStream();
             }
             if (data.clients) {
                 renderClientList(data.clients);
@@ -122,6 +125,16 @@
         .catch(function (err) {
             console.warn("Registration error:", err);
         });
+    }
+
+    function showMjpegStream() {
+        if (exhibitStream && !isActiveSource) {
+            exhibitStream.src = "/room/" + ROOM + "/stream";
+            exhibitStream.style.display = "";
+        }
+        if (localVideo) {
+            localVideo.style.display = "none";
+        }
     }
 
     function startHeartbeat() {
@@ -169,8 +182,8 @@
                 localVideo.srcObject = stream;
                 localVideo.style.display = "";
             }
-            // Hide MJPEG stream when we're the source on exhibition
-            if (MODE === "exhibition" && exhibitStream) {
+            // Hide MJPEG stream when we're the source
+            if (exhibitStream) {
                 exhibitStream.style.display = "none";
             }
             console.log("Camera started");
@@ -235,26 +248,28 @@
     // Source change handling
     // =========================================================================
     function handleSourceChange(amISource) {
+        if (amISource === isActiveSource) return; // guard against duplicate calls
         var wasSource = isActiveSource;
         isActiveSource = amISource;
 
         updateSourceUI();
 
         if (amISource && !wasSource) {
-            // I became the source
+            // I became the source — abort MJPEG, start camera
+            if (exhibitStream) {
+                exhibitStream.src = "";
+                exhibitStream.style.display = "none";
+            }
             startCamera();
             if (isActive) startFrameUpload();
         } else if (!amISource && wasSource) {
-            // I lost source status
+            // I lost source status — stop camera, show MJPEG stream
             stopFrameUpload();
-            // On controller, keep camera for preview; on exhibition, switch back to MJPEG
-            if (MODE === "exhibition") {
-                stopCamera();
-                if (localVideo) localVideo.style.display = "none";
-                if (exhibitStream) {
-                    exhibitStream.style.display = "";
-                    exhibitStream.src = "/room/" + ROOM + "/stream";
-                }
+            stopCamera();
+            if (localVideo) localVideo.style.display = "none";
+            if (exhibitStream) {
+                exhibitStream.style.display = "";
+                exhibitStream.src = "/room/" + ROOM + "/stream";
             }
         }
     }
@@ -718,6 +733,10 @@
         if (!cctvLyricsEl || !data.text) return;
         if (lyricsTimeout) clearTimeout(lyricsTimeout);
         cctvLyricsEl.textContent = data.text;
+        // Ensure lyrics element is visible when in CCTV mode
+        cctvLyricsEl.style.display = "block";
+        cctvLyricsEl.classList.remove("visible");
+        void cctvLyricsEl.offsetWidth; // force reflow for CSS transition
         cctvLyricsEl.classList.add("visible");
         lyricsTimeout = setTimeout(function () {
             cctvLyricsEl.classList.remove("visible");
@@ -780,9 +799,10 @@
     setupUnregister();
 
     if (MODE === "controller") {
-        // Camera will start when source assignment is confirmed via SSE
-        // Start it now for preview in case we're the first controller
-        startCamera();
+        // Hide video; MJPEG stream starts after registration confirms source status
+        if (localVideo) {
+            localVideo.style.display = "none";
+        }
     } else if (MODE === "exhibition") {
         setupExhibition();
     }

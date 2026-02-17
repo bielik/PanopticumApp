@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=9">
+    <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
     <div class="dashboard">
         <!-- Video panel -->
         <div class="video-panel">
             <div class="video-container" id="video-container">
-                <video id="local-video" autoplay playsinline muted></video>
+                <img id="exhibit-stream" src="" alt="Live Feed">
+                <video id="local-video" autoplay playsinline muted style="display:none"></video>
                 <canvas id="capture-canvas" style="display:none"></canvas>
                 <div class="scanlines"></div>
                 <div class="vignette"></div>
@@ -101,6 +102,6 @@
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "controller";
     </script>
-    <script src="/static/app.js?v=9"></script>
+    <script src="/static/app.js?v=10"></script>
 </body>
 </html>
