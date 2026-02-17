@@ -107,7 +107,7 @@
 
     function startFrameUpload() {
         if (frameUploadInterval) return;
-        frameUploadInterval = setInterval(uploadFrame, 2000); // every 2 seconds
+        frameUploadInterval = setInterval(uploadFrame, 250); // ~4fps for smooth exhibition
     }
 
     function stopFrameUpload() {
@@ -126,7 +126,7 @@
         captureCanvas.height = localVideo.videoHeight;
         ctx.drawImage(localVideo, 0, 0);
 
-        var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.7);
+        var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.5);
 
         fetch(API + "/frame", {
             method: "POST",
