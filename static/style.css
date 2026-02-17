@@ -158,14 +158,14 @@ body {
 
 .motivational-message-text {
     font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
-    font-size: 3.4rem;
+    font-size: clamp(1.3rem, 4vw, 4.2rem);
     font-weight: 400;
     color: #ffffff;
     text-align: center;
     line-height: 1.6;
     letter-spacing: 0.3px;
-    max-width: 640px;
-    padding: 40px;
+    max-width: 80%;
+    padding: clamp(16px, 4vw, 48px);
     white-space: pre-line;
     text-shadow:
         0 2px 12px rgba(0, 0, 0, 0.5),
