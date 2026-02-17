@@ -13,8 +13,8 @@ def apply_effect(frame: np.ndarray, effect_name: str) -> np.ndarray:
     """Apply a named visual effect to a frame. Returns a new array."""
     if effect_name == "cctv":
         return _cctv(frame)
-    elif effect_name == "bright":
-        return _bright(frame)
+    elif effect_name == "insta":
+        return _insta(frame)
     else:
         # "natural" or any unknown → passthrough
         return frame
@@ -39,23 +39,19 @@ def _cctv(frame: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(noisy, cv2.COLOR_GRAY2BGR)
 
 
-def _bright(frame: np.ndarray) -> np.ndarray:
-    """Warm tones, increased brightness and saturation."""
-    # Convert to HSV for saturation/brightness boost
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
+def _insta(frame: np.ndarray) -> np.ndarray:
+    """Sepia tones with warmth and brightness (Instagram-vintage style)."""
+    # Classic sepia transformation matrix (BGR input → BGR output)
+    sepia_kernel = np.array([
+        [0.131, 0.534, 0.272],  # B out
+        [0.168, 0.686, 0.349],  # G out
+        [0.189, 0.769, 0.393],  # R out
+    ], dtype=np.float32)
 
-    # Boost saturation by 30%
-    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.3, 0, 255)
-    # Boost brightness by 20%
-    hsv[:, :, 2] = np.clip(hsv[:, :, 2] * 1.2 + 15, 0, 255)
+    sepia = cv2.transform(frame, sepia_kernel)
+    sepia = np.clip(sepia, 0, 255).astype(np.uint8)
 
-    result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+    # Slight brightness and contrast boost for a lively feel
+    result = cv2.convertScaleAbs(sepia, alpha=1.1, beta=12)
 
-    # Warm color grade: boost yellow/orange tones
-    # Slightly increase red and green channels, reduce blue
-    b, g, r = cv2.split(result)
-    r = np.clip(r.astype(np.float32) * 1.08 + 8, 0, 255).astype(np.uint8)
-    g = np.clip(g.astype(np.float32) * 1.04 + 4, 0, 255).astype(np.uint8)
-    b = np.clip(b.astype(np.float32) * 0.92, 0, 255).astype(np.uint8)
-
-    return cv2.merge([b, g, r])
+    return result

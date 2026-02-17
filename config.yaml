@@ -11,7 +11,7 @@ server:
 
 # --- Video Effects ---
 effects:
-  default: "natural"            # "bright", "natural", or "cctv"
+  default: "natural"            # "insta", "natural", or "cctv"
 
 # --- Tone ---
 tone:

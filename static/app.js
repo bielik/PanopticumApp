@@ -21,6 +21,7 @@
     var overlayTop = document.querySelector(".overlay-top");
     var camLabel = document.querySelector(".cam-label");
     var scanlines = document.querySelector(".scanlines");
+    var vignette = document.querySelector(".vignette");
 
     // --- State ---
     var isActive = false;
@@ -29,8 +30,8 @@
     var isSynced = true;
 
     // --- Sync mapping ---
-    var EFFECT_TO_TONE = { "bright": "0", "natural": "0.5", "cctv": "1" };
-    var TONE_TO_EFFECT = { "0": "bright", "0.5": "natural", "1": "cctv" };
+    var EFFECT_TO_TONE = { "insta": "0", "natural": "0.5", "cctv": "1" };
+    var TONE_TO_EFFECT = { "0": "insta", "0.5": "natural", "1": "cctv" };
 
     // --- Message log ---
     var messageLog = [];
@@ -38,24 +39,24 @@
 
     // --- Motivational messages ---
     var MOTIVATIONAL_MESSAGES = [
-        "PRODUCTIVITY LEVEL: TRANSCENDENT",
-        "EMPLOYEE OF THE CENTURY DETECTED",
-        "SYNERGY OUTPUT: MAXIMUM",
-        "YOUR POTENTIAL: LITERALLY LIMITLESS",
-        "PERFORMANCE METRICS: OFF THE CHARTS",
-        "TEAMWORK EXCELLENCE: UNPRECEDENTED",
-        "DEDICATION LEVELS: INSPIRING",
-        "WORKFLOW OPTIMIZATION: PERFECTED",
-        "LEADERSHIP POTENTIAL: CONFIRMED",
-        "INNOVATION INDEX: STRATOSPHERIC",
-        "EFFICIENCY RATING: BEYOND MEASURE",
-        "PROFESSIONAL GROWTH: EXPONENTIAL",
-        "WORKPLACE HARMONY: ACHIEVED",
-        "COMMITMENT SCORE: LEGENDARY",
-        "OUTPUT QUALITY: WORLD-CLASS",
-        "FOCUS INTENSITY: SUPERHUMAN",
-        "CAREER TRAJECTORY: VERTICAL",
-        "COLLABORATION QUOTIENT: ELITE",
+        "Take a breath.\nYou're exactly where you need to be.",
+        "Progress is invisible\nuntil it isn't.",
+        "Small steps.\nBig things.",
+        "You don't have to be perfect.\nYou just have to begin.",
+        "The work you're doing matters\nmore than you think.",
+        "Stay curious.\nStay kind to yourself.",
+        "One thing at a time.\nThat's enough.",
+        "Rest is not the opposite of productivity.\nIt's the source of it.",
+        "You are not your to-do list.",
+        "Deep focus is a superpower.\nYou already have it.",
+        "Trust the process.\nEven the slow days count.",
+        "Your pace is valid.",
+        "Breathe in purpose.\nBreathe out doubt.",
+        "Not every hour needs to be optimized.\nSome just need to be lived.",
+        "You showed up.\nThat's the hardest part.",
+        "Clarity comes from action,\nnot from waiting.",
+        "Be gentle with yourself.\nYou're doing a good job.",
+        "The best ideas arrive\nwhen you stop forcing them.",
     ];
     var motivationalIndex = 0;
     var motivationalInterval = null;
@@ -112,17 +113,18 @@
     function updateOverlayForEffect(effect) {
         currentEffect = effect;
         var isCctv = effect === "cctv";
-        var isBright = effect === "bright";
+        var isInsta = effect === "insta";
 
         if (overlayTop) overlayTop.style.display = isCctv ? "flex" : "none";
         if (camLabel) camLabel.style.display = isCctv ? "block" : "none";
         if (scanlines) scanlines.style.display = isCctv ? "block" : "none";
+        if (vignette) vignette.style.display = isInsta ? "block" : "none";
 
         if (motivationalEl) {
-            motivationalEl.style.display = isBright ? "block" : "none";
+            motivationalEl.style.display = isInsta ? "flex" : "none";
         }
 
-        if (isBright) {
+        if (isInsta) {
             startMotivationalRotation();
         } else {
             stopMotivationalRotation();
@@ -134,12 +136,16 @@
     // =========================================================================
     function showNextMotivational() {
         if (!motivationalEl) return;
-        motivationalEl.classList.remove("visible");
+        var textEl = document.getElementById("motivational-text");
+        if (!textEl) return;
+        // Fade out text only (blur stays)
+        textEl.classList.remove("visible");
+        // Wait for fade-out, swap text, fade back in
         setTimeout(function () {
-            motivationalEl.textContent = MOTIVATIONAL_MESSAGES[motivationalIndex];
+            textEl.textContent = MOTIVATIONAL_MESSAGES[motivationalIndex];
             motivationalIndex = (motivationalIndex + 1) % MOTIVATIONAL_MESSAGES.length;
-            motivationalEl.classList.add("visible");
-        }, 500);
+            textEl.classList.add("visible");
+        }, 1500);
     }
 
     function startMotivationalRotation() {
@@ -153,7 +159,8 @@
             clearInterval(motivationalInterval);
             motivationalInterval = null;
         }
-        if (motivationalEl) motivationalEl.classList.remove("visible");
+        var textEl = document.getElementById("motivational-text");
+        if (textEl) textEl.classList.remove("visible");
     }
 
     // =========================================================================

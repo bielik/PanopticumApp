@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Exhibition</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body class="exhibit-mode">
     <div class="video-container">
         <img src="/stream" alt="Live Feed">
         <div class="scanlines"></div>
+        <div class="vignette"></div>
         <div class="overlay">
             <!-- Top bar (CCTV only) -->
             <div class="overlay-top">
@@ -24,10 +25,10 @@
             <span class="cam-label">CAM-01</span>
 
             <!-- Motivational message (Bright only) -->
-            <div class="motivational-message" id="motivational-message"></div>
+            <div class="motivational-message" id="motivational-message"><span class="motivational-message-text" id="motivational-text"></span></div>
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=5"></script>
 </body>
 </html>

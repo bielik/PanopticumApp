@@ -1,6 +1,6 @@
 /* PANOPTICUM — Corporate work supervisor aesthetic */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 * {
     margin: 0;
@@ -75,7 +75,7 @@ body {
 }
 
 .timestamp {
-    font-size: 1.1rem;
+    font-size: 1.6rem;
     letter-spacing: 2px;
     text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
 }
@@ -83,15 +83,15 @@ body {
 .rec-indicator {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.95rem;
+    gap: 8px;
+    font-size: 1.4rem;
     color: #ff0000;
     text-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
 }
 
 .rec-dot {
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #ff0000;
     box-shadow: 0 0 6px rgba(255, 0, 0, 0.8);
@@ -111,7 +111,7 @@ body {
     bottom: 16px;
     right: 20px;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: 0.85rem;
+    font-size: 1.3rem;
     color: #00ff41;
     opacity: 0.7;
     display: none;
@@ -120,28 +120,52 @@ body {
 /* --- Motivational message overlay --- */
 .motivational-message {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #fff;
-    text-align: center;
-    text-shadow:
-        0 0 20px rgba(255, 200, 50, 0.8),
-        0 0 40px rgba(255, 150, 0, 0.4);
-    letter-spacing: 3px;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: none;
-    padding: 20px 40px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    max-width: 80%;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 225, 195, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 8;
 }
 
-.motivational-message.visible {
+.motivational-message-text {
+    font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+    font-size: 3.4rem;
+    font-weight: 400;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.6;
+    letter-spacing: 0.3px;
+    max-width: 640px;
+    padding: 40px;
+    white-space: pre-line;
+    text-shadow:
+        0 2px 12px rgba(0, 0, 0, 0.5),
+        0 1px 3px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 1.2s ease-in-out;
+}
+
+.motivational-message-text.visible {
     opacity: 1;
+}
+
+/* --- Vignette overlay (Insta only) --- */
+.vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(40, 20, 5, 0.55) 100%);
+    pointer-events: none;
+    z-index: 6;
+    display: none;
 }
 
 /* --- Scanline overlay (CCTV only) --- */
