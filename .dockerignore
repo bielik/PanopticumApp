@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+.env
+.git
+.gitignore
+.claude
+*.log
+*.png
+panopticum_log.txt
+setup_check.py
+README.md
+effects.py
+overlay.py
+narrator.py
+main.py
+run.bat
+venv

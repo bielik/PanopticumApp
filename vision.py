@@ -2,30 +2,20 @@
 vision.py — Vision model interface.
 
 Sends camera frames to an AI model and gets back scene descriptions.
-Supports Ollama (local, free) and Google Gemini (cheap API fallback).
+Supports Google Gemini (primary, cloud deployment).
 """
 
-import base64
 import logging
 import os
-import re
 import time
 from pathlib import Path
-
-import cv2
 
 log = logging.getLogger("panopticum.vision")
 
 
 def create_vision_backend(config):
     """Factory: return the right vision backend based on config."""
-    backend = config["vision"]["backend"]
-    if backend == "ollama":
-        return OllamaVision(config)
-    elif backend == "gemini":
-        return GeminiVision(config)
-    else:
-        raise ValueError(f"Unknown vision backend: {backend}")
+    return GeminiVision(config)
 
 
 def load_prompt(config):
@@ -65,35 +55,6 @@ def load_narration_prompt(config):
             "If NOTHING changed, respond: NO_CHANGE\n"
             "Otherwise respond with a 2-5 word surveillance status fragment."
         )
-
-
-class OllamaVision:
-    """Local vision model via Ollama."""
-
-    def __init__(self, config):
-        import ollama
-
-        ollama_cfg = config["vision"]["ollama"]
-        self.client = ollama.Client(host=ollama_cfg["host"], timeout=ollama_cfg["timeout"])
-        self.model = ollama_cfg["model"]
-        self.prompt = load_prompt(config)
-        log.info(f"OllamaVision initialized: model={self.model}")
-
-    def describe(self, jpeg_bytes: bytes) -> str:
-        """Send a JPEG frame to the vision model and return its description."""
-        response = self.client.chat(
-            model=self.model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": self.prompt,
-                    "images": [jpeg_bytes],
-                }
-            ],
-        )
-        text = response.message.content.strip()
-        log.info(f"Ollama: {text}")
-        return text
 
 
 class GeminiVision:
@@ -217,9 +178,3 @@ class GeminiVision:
         if needs_introduction:
             self.introduced = True
         return result
-
-
-def encode_frame(frame) -> bytes:
-    """Encode an OpenCV frame as JPEG bytes."""
-    _, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-    return jpeg.tobytes()

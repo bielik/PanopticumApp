@@ -45,7 +45,8 @@ body {
     overflow: hidden;
 }
 
-.video-container img {
+.video-container img,
+.video-container video {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -615,4 +616,181 @@ body.exhibit-mode .video-container {
     width: 100vw;
     height: 100vh;
     border-radius: 0;
+}
+
+/* --- Lobby page --- */
+.lobby {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.lobby-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 48px 40px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.lobby-title {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-align: center;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+}
+
+.lobby-subtitle {
+    font-size: 0.8rem;
+    color: #8b8fa3;
+    text-align: center;
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+}
+
+.lobby-section {
+    margin-bottom: 8px;
+}
+
+.lobby-section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #8b8fa3;
+    margin-bottom: 12px;
+}
+
+.lobby-form {
+    display: flex;
+    gap: 10px;
+}
+
+.lobby-input {
+    flex: 1;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.9rem;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.lobby-input:focus {
+    border-color: #4f46e5;
+}
+
+.lobby-input::placeholder {
+    color: #b0b4c3;
+    letter-spacing: 1px;
+}
+
+.lobby-btn {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.lobby-btn-primary {
+    background: #4f46e5;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.lobby-btn-primary:hover {
+    background: #4338ca;
+}
+
+.lobby-btn-secondary {
+    background: #f0f1f5;
+    color: #374151;
+}
+
+.lobby-btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.lobby-divider {
+    text-align: center;
+    margin: 24px 0;
+    position: relative;
+}
+
+.lobby-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.lobby-divider span {
+    position: relative;
+    background: #fff;
+    padding: 0 16px;
+    font-size: 0.75rem;
+    color: #b0b4c3;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.lobby-error {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.lobby-success {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.lobby-success a {
+    color: #4f46e5;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.lobby-success a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .lobby-card {
+        padding: 32px 24px;
+    }
+
+    .lobby-form {
+        flex-direction: column;
+    }
+
+    .lobby-title {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+    }
 }

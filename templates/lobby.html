@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANOPTICUM</title>
+    <link rel="stylesheet" href="/static/style.css?v=8">
+</head>
+<body>
+    <div class="lobby">
+        <div class="lobby-card">
+            <h1 class="lobby-title">PANOPTICUM</h1>
+            <p class="lobby-subtitle">Interactive Surveillance Art Installation</p>
+
+            {% if error %}
+            <div class="lobby-error">{{ error }}</div>
+            {% endif %}
+
+            <!-- Join room -->
+            <div class="lobby-section">
+                <h2 class="lobby-section-title">Join a Room</h2>
+                <div class="lobby-form">
+                    <input type="text" id="join-code" class="lobby-input" placeholder="PANOPT-XXXX" maxlength="11" autocomplete="off">
+                    <button id="join-btn" class="lobby-btn lobby-btn-primary">Join</button>
+                </div>
+                <div class="lobby-error" id="join-error" style="display:none"></div>
+            </div>
+
+            <div class="lobby-divider"><span>or</span></div>
+
+            <!-- Create room (admin) -->
+            <div class="lobby-section">
+                <h2 class="lobby-section-title">Create a Room</h2>
+                <div class="lobby-form">
+                    <input type="password" id="admin-password" class="lobby-input" placeholder="Admin password" autocomplete="off">
+                    <button id="create-btn" class="lobby-btn lobby-btn-secondary">Create</button>
+                </div>
+                <div class="lobby-error" id="create-error" style="display:none"></div>
+                <div class="lobby-success" id="create-success" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var joinBtn = document.getElementById("join-btn");
+        var joinCode = document.getElementById("join-code");
+        var joinError = document.getElementById("join-error");
+
+        var createBtn = document.getElementById("create-btn");
+        var adminPw = document.getElementById("admin-password");
+        var createError = document.getElementById("create-error");
+        var createSuccess = document.getElementById("create-success");
+
+        // Auto-uppercase room code
+        joinCode.addEventListener("input", function() {
+            joinCode.value = joinCode.value.toUpperCase();
+        });
+
+        // Join room
+        joinBtn.addEventListener("click", function() {
+            var code = joinCode.value.trim();
+            if (!code) return;
+            joinError.style.display = "none";
+
+            fetch("/api/join-room", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({code: code}),
+            })
+            .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
+            .then(function(res) {
+                if (res.ok) {
+                    window.location.href = "/room/" + res.data.code;
+                } else {
+                    joinError.textContent = res.data.error || "Room not found.";
+                    joinError.style.display = "block";
+                }
+            })
+            .catch(function() {
+                joinError.textContent = "Connection error.";
+                joinError.style.display = "block";
+            });
+        });
+
+        joinCode.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") joinBtn.click();
+        });
+
+        // Create room
+        createBtn.addEventListener("click", function() {
+            var pw = adminPw.value;
+            if (!pw) return;
+            createError.style.display = "none";
+            createSuccess.style.display = "none";
+
+            fetch("/api/create-room", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({password: pw}),
+            })
+            .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
+            .then(function(res) {
+                if (res.ok) {
+                    createSuccess.innerHTML = 'Room created: <strong>' + res.data.code + '</strong>' +
+                        '<br><a href="/room/' + res.data.code + '">Open Controller</a>' +
+                        ' &middot; <a href="/room/' + res.data.code + '/exhibit">Open Exhibition</a>';
+                    createSuccess.style.display = "block";
+                    // Also put the code in the join field for convenience
+                    joinCode.value = res.data.code;
+                } else {
+                    createError.textContent = res.data.error || "Failed to create room.";
+                    createError.style.display = "block";
+                }
+            })
+            .catch(function() {
+                createError.textContent = "Connection error.";
+                createError.style.display = "block";
+            });
+        });
+
+        adminPw.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") createBtn.click();
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PANOPTICUM</title>
-    <link rel="stylesheet" href="/static/style.css?v=7">
+    <title>PANOPTICUM — {{ room_code }}</title>
+    <link rel="stylesheet" href="/static/style.css?v=8">
 </head>
 <body>
     <div class="dashboard">
         <!-- Video panel -->
         <div class="video-panel">
-            <div class="video-container">
-                <img src="/stream" alt="Live Feed">
+            <div class="video-container" id="video-container">
+                <video id="local-video" autoplay playsinline muted></video>
+                <canvas id="capture-canvas" style="display:none"></canvas>
                 <div class="scanlines"></div>
                 <div class="vignette"></div>
                 <div class="overlay">
@@ -77,6 +78,11 @@
         <button class="log-expand-btn" id="log-expand-btn" title="Show activity log">&#9776;</button>
     </div>
 
-    <script src="/static/app.js?v=7"></script>
+    <script>
+        // Room code injected by server
+        window.ROOM_CODE = "{{ room_code }}";
+        window.PAGE_MODE = "controller";
+    </script>
+    <script src="/static/app.js?v=8"></script>
 </body>
 </html>

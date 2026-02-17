@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Exhibition</title>
-    <link rel="stylesheet" href="/static/style.css?v=7">
+    <link rel="stylesheet" href="/static/style.css?v=8">
 </head>
 <body class="exhibit-mode">
     <div class="video-container">
-        <img src="/stream" alt="Live Feed">
+        <img id="exhibit-stream" src="" alt="Live Feed">
         <div class="scanlines"></div>
         <div class="vignette"></div>
         <div class="overlay">
@@ -30,8 +30,16 @@
             <!-- Motivational message (Insta only) -->
             <div class="motivational-message" id="motivational-message"><span class="motivational-message-text" id="motivational-text"></span></div>
         </div>
+
+        <!-- Audio elements for TTS playback -->
+        <audio id="audio-player" preload="none"></audio>
+        <audio id="audio-robotic-player" preload="none"></audio>
     </div>
 
-    <script src="/static/app.js?v=7"></script>
+    <script>
+        window.ROOM_CODE = "{{ room_code }}";
+        window.PAGE_MODE = "exhibition";
+    </script>
+    <script src="/static/app.js?v=8"></script>
 </body>
 </html>

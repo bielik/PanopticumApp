@@ -1,7 +1,12 @@
-/* PANOPTICUM — Frontend controller */
+/* PANOPTICUM — Frontend controller (HuggingFace Spaces version) */
 
 (function () {
     "use strict";
+
+    // --- Room & mode from server-injected globals ---
+    var ROOM = window.ROOM_CODE || "";
+    var MODE = window.PAGE_MODE || "controller"; // "controller" or "exhibition"
+    var API = "/room/" + ROOM + "/api";
 
     // --- Elements ---
     var timestampEl = document.getElementById("timestamp");
@@ -24,11 +29,29 @@
     var scanlines = document.querySelector(".scanlines");
     var vignette = document.querySelector(".vignette");
 
+    // Controller-specific elements
+    var localVideo = document.getElementById("local-video");
+    var captureCanvas = document.getElementById("capture-canvas");
+
+    // Exhibition-specific elements
+    var exhibitStream = document.getElementById("exhibit-stream");
+    var audioPlayer = document.getElementById("audio-player");
+    var audioRoboticPlayer = document.getElementById("audio-robotic-player");
+
     // --- State ---
     var isActive = false;
     var currentEffect = "natural";
     var currentTone = "0.5";
     var isSynced = true;
+    var frameUploadInterval = null;
+    var cameraStream = null;
+
+    // --- CSS filter map for effects ---
+    var EFFECT_FILTERS = {
+        "insta": "sepia(0.4) brightness(1.1) saturate(1.2) contrast(1.05)",
+        "natural": "none",
+        "cctv": "grayscale(1) brightness(0.85) contrast(1.3)"
+    };
 
     // --- Sync mapping ---
     var EFFECT_TO_TONE = { "insta": "0", "natural": "0.5", "cctv": "1" };
@@ -63,6 +86,114 @@
     var motivationalInterval = null;
 
     // =========================================================================
+    // Camera (controller mode only)
+    // =========================================================================
+    function startCamera() {
+        if (MODE !== "controller" || !localVideo) return;
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        })
+        .then(function (stream) {
+            cameraStream = stream;
+            localVideo.srcObject = stream;
+            console.log("Camera started");
+        })
+        .catch(function (err) {
+            console.error("Camera error:", err);
+        });
+    }
+
+    function startFrameUpload() {
+        if (frameUploadInterval) return;
+        frameUploadInterval = setInterval(uploadFrame, 2000); // every 2 seconds
+    }
+
+    function stopFrameUpload() {
+        if (frameUploadInterval) {
+            clearInterval(frameUploadInterval);
+            frameUploadInterval = null;
+        }
+    }
+
+    function uploadFrame() {
+        if (!localVideo || !captureCanvas || !cameraStream) return;
+        if (localVideo.videoWidth === 0) return; // not ready yet
+
+        var ctx = captureCanvas.getContext("2d");
+        captureCanvas.width = localVideo.videoWidth;
+        captureCanvas.height = localVideo.videoHeight;
+        ctx.drawImage(localVideo, 0, 0);
+
+        var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.7);
+
+        fetch(API + "/frame", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ frame: dataUrl }),
+        }).catch(function (err) {
+            console.warn("Frame upload error:", err);
+        });
+    }
+
+    // Apply CSS filter to video element
+    function applyVideoFilter(effect) {
+        var filter = EFFECT_FILTERS[effect] || "none";
+        if (localVideo) localVideo.style.filter = filter;
+        if (exhibitStream) exhibitStream.style.filter = filter;
+    }
+
+    // =========================================================================
+    // Exhibition mode setup
+    // =========================================================================
+    function setupExhibition() {
+        if (MODE !== "exhibition" || !exhibitStream) return;
+        exhibitStream.src = "/room/" + ROOM + "/stream";
+    }
+
+    // Audio playback queue for exhibition
+    var audioQueue = [];
+    var isPlayingAudio = false;
+
+    function playAudio(url) {
+        if (!audioPlayer) return;
+        audioQueue.push({ url: url, player: audioPlayer });
+        processAudioQueue();
+    }
+
+    function playRoboticAudio(url) {
+        if (!audioRoboticPlayer) return;
+        audioQueue.push({ url: url, player: audioRoboticPlayer });
+        processAudioQueue();
+    }
+
+    function processAudioQueue() {
+        if (isPlayingAudio || audioQueue.length === 0) return;
+        isPlayingAudio = true;
+
+        var item = audioQueue.shift();
+        var player = item.player;
+        player.src = item.url;
+        player.play().then(function () {
+            // playing
+        }).catch(function (err) {
+            console.warn("Audio play error:", err);
+            isPlayingAudio = false;
+            processAudioQueue();
+        });
+
+        player.onended = function () {
+            isPlayingAudio = false;
+            processAudioQueue();
+        };
+        player.onerror = function () {
+            isPlayingAudio = false;
+            processAudioQueue();
+        };
+    }
+
+    // =========================================================================
     // Start/Stop
     // =========================================================================
     function updateStartStopButton(active) {
@@ -81,11 +212,21 @@
 
     if (startStopBtn) {
         startStopBtn.addEventListener("click", function () {
-            fetch("/api/active", {
+            var newActive = !isActive;
+            fetch(API + "/active", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ active: !isActive }),
+                body: JSON.stringify({ active: newActive }),
             });
+
+            // Start/stop frame upload on controller
+            if (MODE === "controller") {
+                if (newActive) {
+                    startFrameUpload();
+                } else {
+                    stopFrameUpload();
+                }
+            }
         });
     }
 
@@ -131,6 +272,9 @@
         } else {
             stopMotivationalRotation();
         }
+
+        // Apply CSS filter
+        applyVideoFilter(effect);
     }
 
     // =========================================================================
@@ -140,9 +284,7 @@
         if (!motivationalEl) return;
         var textEl = document.getElementById("motivational-text");
         if (!textEl) return;
-        // Fade out text only (blur stays)
         textEl.classList.remove("visible");
-        // Wait for fade-out, swap text, fade back in
         setTimeout(function () {
             textEl.textContent = MOTIVATIONAL_MESSAGES[motivationalIndex];
             motivationalIndex = (motivationalIndex + 1) % MOTIVATIONAL_MESSAGES.length;
@@ -186,7 +328,7 @@
     // =========================================================================
     function setEffect(effect, fromSync) {
         currentEffect = effect;
-        fetch("/api/effect", {
+        fetch(API + "/effect", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ effect: effect }),
@@ -194,7 +336,6 @@
         highlightEffectPill(effect);
         updateOverlayForEffect(effect);
 
-        // Sync: effect change drives tone
         if (isSynced && !fromSync && EFFECT_TO_TONE[effect] !== undefined) {
             setTone(EFFECT_TO_TONE[effect], true);
         }
@@ -211,14 +352,13 @@
     // =========================================================================
     function setTone(toneValue, fromSync) {
         currentTone = String(toneValue);
-        fetch("/api/tone", {
+        fetch(API + "/tone", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ value: parseFloat(toneValue) }),
         });
         highlightTonePill(toneValue);
 
-        // Sync: tone change drives effect
         if (isSynced && !fromSync && TONE_TO_EFFECT[currentTone] !== undefined) {
             setEffect(TONE_TO_EFFECT[currentTone], true);
         }
@@ -237,7 +377,6 @@
         isSynced = syncCheckbox.checked;
         syncCheckbox.addEventListener("change", function () {
             isSynced = syncCheckbox.checked;
-            // If turning sync on, align tone to current effect
             if (isSynced && EFFECT_TO_TONE[currentEffect] !== undefined) {
                 setTone(EFFECT_TO_TONE[currentEffect], true);
             }
@@ -291,11 +430,20 @@
     // =========================================================================
     // SSE listeners
     // =========================================================================
-    var evtSource = new EventSource("/events");
+    var evtSource = new EventSource("/room/" + ROOM + "/events");
 
     evtSource.addEventListener("active", function (e) {
         var data = JSON.parse(e.data);
         updateStartStopButton(data.active);
+
+        // Auto-start/stop frame upload on controller
+        if (MODE === "controller") {
+            if (data.active) {
+                startFrameUpload();
+            } else {
+                stopFrameUpload();
+            }
+        }
     });
 
     evtSource.addEventListener("description", function (e) {
@@ -312,23 +460,32 @@
 
     evtSource.addEventListener("tone", function (e) {
         var data = JSON.parse(e.data);
-        // Find nearest pill value
         var v = parseFloat(data.value);
         var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";
         highlightTonePill(nearest);
         currentTone = nearest;
     });
 
+    // Audio events (exhibition mode)
+    evtSource.addEventListener("audio", function (e) {
+        if (MODE !== "exhibition") return;
+        var data = JSON.parse(e.data);
+        if (data.url) playAudio(data.url);
+    });
+
+    evtSource.addEventListener("audio_robotic", function (e) {
+        if (MODE !== "exhibition") return;
+        var data = JSON.parse(e.data);
+        if (data.url) playRoboticAudio(data.url);
+    });
+
     var lyricsTimeout = null;
     evtSource.addEventListener("lyrics", function (e) {
         var data = JSON.parse(e.data);
         if (!cctvLyricsEl || !data.text) return;
-        // Clear any pending hide
         if (lyricsTimeout) clearTimeout(lyricsTimeout);
-        // Show lyrics with fade-in
         cctvLyricsEl.textContent = data.text;
         cctvLyricsEl.classList.add("visible");
-        // Fade out after 8 seconds
         lyricsTimeout = setTimeout(function () {
             cctvLyricsEl.classList.remove("visible");
         }, 8000);
@@ -341,7 +498,7 @@
     // =========================================================================
     // Initial state
     // =========================================================================
-    fetch("/api/status")
+    fetch(API + "/status")
         .then(function (r) { return r.json(); })
         .then(function (data) {
             updateStartStopButton(data.active);
@@ -355,6 +512,11 @@
             currentTone = nearest;
 
             if (data.description) addToMessageLog(data.description, data.tone);
+
+            // If already active, start frame upload
+            if (data.active && MODE === "controller") {
+                startFrameUpload();
+            }
         })
         .catch(function (err) {
             console.warn("Failed to fetch initial status:", err);
@@ -375,5 +537,14 @@
             messageLogPanel.classList.remove("collapsed");
             logExpandBtn.classList.remove("visible");
         });
+    }
+
+    // =========================================================================
+    // Initialize
+    // =========================================================================
+    if (MODE === "controller") {
+        startCamera();
+    } else if (MODE === "exhibition") {
+        setupExhibition();
     }
 })();
