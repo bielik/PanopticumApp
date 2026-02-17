@@ -89,6 +89,7 @@ async def _sse_generator():
     last_effect = ""
     last_tone = -1.0
     last_active = None
+    last_lyrics = ""
 
     while True:
         events = []
@@ -100,6 +101,7 @@ async def _sse_generator():
             effect = state.current_effect
             tone = state.tone_value
             active = state.active
+            lyrics = state.lyrics_line
 
         if active != last_active:
             last_active = active
@@ -110,6 +112,7 @@ async def _sse_generator():
             events.append(("description", json.dumps({
                 "text": desc,
                 "timestamp": desc_time,
+                "tone": tone,
             })))
 
         if speaking != last_speaking:
@@ -123,6 +126,10 @@ async def _sse_generator():
         if tone != last_tone:
             last_tone = tone
             events.append(("tone", json.dumps({"value": tone})))
+
+        if lyrics != last_lyrics:
+            last_lyrics = lyrics
+            events.append(("lyrics", json.dumps({"text": lyrics})))
 
         for event_type, data in events:
             yield f"event: {event_type}\ndata: {data}\n\n"

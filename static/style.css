@@ -117,6 +117,28 @@ body {
     display: none;
 }
 
+/* --- CCTV lyrics overlay (judgmental mode) --- */
+.cctv-lyrics {
+    position: absolute;
+    bottom: 60px;
+    left: 20px;
+    right: 20px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 1.5rem;
+    color: #00ff41;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.6);
+    text-align: center;
+    white-space: pre-line;
+    line-height: 1.6;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    display: none;
+}
+
+.cctv-lyrics.visible {
+    opacity: 1;
+}
+
 /* --- Motivational message overlay --- */
 .motivational-message {
     position: absolute;
@@ -464,6 +486,33 @@ body {
     margin-bottom: 6px;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5px;
+}
+
+.tone-tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.tone-supportive {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.tone-neutral {
+    background: #f0f1f5;
+    color: #8b8fa3;
+}
+
+.tone-judgmental {
+    background: #fee2e2;
+    color: #dc2626;
 }
 
 .message-log-text {

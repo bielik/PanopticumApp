@@ -96,6 +96,50 @@ class EdgeTTSBackend:
         )
         await communicate.save(output_path)
 
+    def speak_robotic(self, text: str):
+        """Speak with a robotic female voice. Blocks until playback finishes."""
+        import edge_tts
+
+        fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd)
+
+        try:
+            log.info(f"Generating robotic speech: {text[:60]}...")
+            asyncio.run(self._generate_robotic(edge_tts, text, temp_path))
+
+            file_size = os.path.getsize(temp_path)
+            if file_size == 0:
+                log.warning("Empty robotic audio file, skipping")
+                return
+
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+
+            pygame.mixer.music.load(temp_path)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                time.sleep(0.1)
+            pygame.mixer.music.unload()
+
+        except Exception as e:
+            log.error(f"Robotic TTS error: {e}", exc_info=True)
+        finally:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+
+    async def _generate_robotic(self, edge_tts, text: str, output_path: str):
+        """Generate audio with a robotic female voice."""
+        communicate = edge_tts.Communicate(
+            text,
+            "en-US-JennyNeural",
+            rate="-25%",
+            volume="+0%",
+            pitch="-15Hz",
+        )
+        await communicate.save(output_path)
+
 
 class Pyttsx3Backend:
     """Offline TTS using Windows SAPI5 voices."""

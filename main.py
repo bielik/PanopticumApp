@@ -77,6 +77,11 @@ class SharedState:
     tone_value: float = 0.5
     tone_preamble: str = ""
 
+    # Lyrics overlay (judgmental mode)
+    cycle_count: int = 0
+    lyrics_line: str = ""
+    lyrics_timestamp: float = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Camera worker (runs in background thread)
@@ -355,6 +360,43 @@ def _log_description(config, description):
 
 
 # ---------------------------------------------------------------------------
+# Fitter Happier lyrics (Radiohead) — spoken in judgmental mode
+# ---------------------------------------------------------------------------
+FITTER_HAPPIER_LYRICS = [
+    "Fitter, happier\nMore productive",
+    "Comfortable\nNot drinking too much",
+    "Regular exercise at the gym\nThree days a week",
+    "This is the Panic Office\nSection 917 may have been hit",
+    "Activate following procedure",
+    "Getting on better with your\nAssociate employee contemporaries",
+    "At ease\nEating well",
+    "No more microwave dinners\nAnd saturated fats",
+    "A patient, better driver\nA safer car",
+    "Baby smiling in back seat\nSleeping well, no bad dreams",
+    "No paranoia\nCareful to all animals",
+    "Never washing spiders\nDown the plughole",
+    "Keep in contact with old friends\nEnjoy a drink now and then",
+    "Will frequently check credit\nAt moral bank",
+    "Fond, but not in love\nCharity standing orders",
+    "On Sundays\nRing road supermarket",
+    "No killing moths or putting\nBoiling water on the ants",
+    "No longer afraid of the dark\nOr midday shadows",
+    "Nothing so ridiculously\nTeenage and desperate",
+    "At a better pace\nSlower and more calculated",
+    "No chance of escape\nNow self-employed",
+    "Concerned, but powerless\nAn empowered and informed\nMember of society",
+    "Pragmatism, not idealism\nWill not cry in public",
+    "Less chance of illness\nTires that grip in the wet",
+    "A good memory\nStill cries at a good film",
+    "Still kisses with saliva\nNo longer empty and frantic",
+    "Like a cat, tied to a stick\nThat's driven into\nFrozen winter shit",
+    "The ability to laugh\nAt weakness",
+    "Calm\nFitter, healthier\nAnd more productive",
+    "A pig in a cage\nOn antibiotics",
+]
+
+
+# ---------------------------------------------------------------------------
 # TTS worker (runs in background thread)
 # ---------------------------------------------------------------------------
 def tts_worker(config, state: SharedState):
@@ -375,6 +417,7 @@ def tts_worker(config, state: SharedState):
             return
 
     last_spoken = ""
+    lyrics_index = 0
 
     while state.running:
         # Idle-loop when not active — no TTS
@@ -391,8 +434,30 @@ def tts_worker(config, state: SharedState):
 
             with state.lock:
                 state.is_speaking = True
+                state.cycle_count += 1
+                cycle = state.cycle_count
+                tone = state.tone_value
+
             try:
                 tts.speak(description)
+
+                # Every 4th cycle in judgmental mode: robotic female voice reads lyrics
+                if cycle % 4 == 0 and tone >= 0.75:
+                    line = FITTER_HAPPIER_LYRICS[lyrics_index % len(FITTER_HAPPIER_LYRICS)]
+                    lyrics_index += 1
+                    log.info(f"Lyrics: {line}")
+
+                    with state.lock:
+                        state.lyrics_line = line
+                        state.lyrics_timestamp = time.time()
+
+                    # Speak flat text (strip display newlines)
+                    spoken = line.replace("\n", " ")
+                    if hasattr(tts, "speak_robotic"):
+                        tts.speak_robotic(spoken)
+                    else:
+                        tts.speak(spoken)
+
             except Exception as e:
                 log.warning(f"TTS speak error: {e}", exc_info=True)
             finally:

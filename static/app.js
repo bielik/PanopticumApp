@@ -13,6 +13,7 @@
     var messageLogPanel = document.getElementById("message-log");
     var logCollapseBtn = document.getElementById("log-collapse-btn");
     var logExpandBtn = document.getElementById("log-expand-btn");
+    var cctvLyricsEl = document.getElementById("cctv-lyrics");
 
     var effectPills = document.querySelectorAll("#effect-pills .pill-btn");
     var tonePills = document.querySelectorAll("#tone-pills .pill-btn");
@@ -119,6 +120,7 @@
         if (camLabel) camLabel.style.display = isCctv ? "block" : "none";
         if (scanlines) scanlines.style.display = isCctv ? "block" : "none";
         if (vignette) vignette.style.display = isInsta ? "block" : "none";
+        if (cctvLyricsEl) cctvLyricsEl.style.display = isCctv ? "block" : "none";
 
         if (motivationalEl) {
             motivationalEl.style.display = isInsta ? "flex" : "none";
@@ -245,6 +247,13 @@
     // =========================================================================
     // Message log
     // =========================================================================
+    function toneLabel(tone) {
+        var v = parseFloat(tone);
+        if (v <= 0.25) return '<span class="tone-tag tone-supportive">Supportive</span>';
+        if (v <= 0.75) return '<span class="tone-tag tone-neutral">Neutral</span>';
+        return '<span class="tone-tag tone-judgmental">Judgmental</span>';
+    }
+
     function renderMessageLog() {
         if (!messageLogList) return;
         if (messageLog.length === 0) {
@@ -256,7 +265,7 @@
             var msg = messageLog[i];
             var cls = i === 0 ? "message-log-item latest" : "message-log-item";
             html += '<div class="' + cls + '">';
-            html += '<span class="message-log-time">' + (msg.time || "") + '</span>';
+            html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + '</span>';
             html += '<span class="message-log-text">' + escapeHtml(msg.text) + '</span>';
             html += '</div>';
         }
@@ -269,12 +278,12 @@
         return div.innerHTML;
     }
 
-    function addToMessageLog(text) {
+    function addToMessageLog(text, tone) {
         var now = new Date();
         var h = String(now.getHours()).padStart(2, "0");
         var mi = String(now.getMinutes()).padStart(2, "0");
         var s = String(now.getSeconds()).padStart(2, "0");
-        messageLog.unshift({ text: text, time: h + ":" + mi + ":" + s });
+        messageLog.unshift({ text: text, time: h + ":" + mi + ":" + s, tone: tone !== undefined ? tone : 0.5 });
         if (messageLog.length > MAX_LOG_MESSAGES) messageLog.pop();
         renderMessageLog();
     }
@@ -291,7 +300,7 @@
 
     evtSource.addEventListener("description", function (e) {
         var data = JSON.parse(e.data);
-        if (data.text) addToMessageLog(data.text);
+        if (data.text) addToMessageLog(data.text, data.tone);
     });
 
     evtSource.addEventListener("effect", function (e) {
@@ -308,6 +317,21 @@
         var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";
         highlightTonePill(nearest);
         currentTone = nearest;
+    });
+
+    var lyricsTimeout = null;
+    evtSource.addEventListener("lyrics", function (e) {
+        var data = JSON.parse(e.data);
+        if (!cctvLyricsEl || !data.text) return;
+        // Clear any pending hide
+        if (lyricsTimeout) clearTimeout(lyricsTimeout);
+        // Show lyrics with fade-in
+        cctvLyricsEl.textContent = data.text;
+        cctvLyricsEl.classList.add("visible");
+        // Fade out after 8 seconds
+        lyricsTimeout = setTimeout(function () {
+            cctvLyricsEl.classList.remove("visible");
+        }, 8000);
     });
 
     evtSource.onerror = function () {
@@ -330,7 +354,7 @@
             highlightTonePill(nearest);
             currentTone = nearest;
 
-            if (data.description) addToMessageLog(data.description);
+            if (data.description) addToMessageLog(data.description, data.tone);
         })
         .catch(function (err) {
             console.warn("Failed to fetch initial status:", err);
