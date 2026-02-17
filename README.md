@@ -24,7 +24,7 @@ PANOPTICUM runs in two distinct modes depending on the context:
 | TTS output | Local speakers (pyttsx3/edge-tts) | MP3 streamed to exhibition browser |
 | Users | Single operator | Multiple rooms, multiple clients per room |
 | Video relay | Direct OpenCV → MJPEG | Browser → base64 POST → server MJPEG |
-| URL | `http://localhost:8000` | `https://huggingface.co/spaces/...` |
+| URL | `http://localhost:8000` | [huggingface.co/spaces/MartinBLK/Panopticum](https://huggingface.co/spaces/MartinBLK/Panopticum) |
 
 ---
 
