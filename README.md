@@ -13,7 +13,24 @@ An interactive surveillance art installation.
 
 A camera watches a space. An AI describes what it sees. A voice speaks the description out loud. The cosy becomes clinical. The private becomes observed. The machine judges.
 
+## Two Deployment Modes
+
+PANOPTICUM runs in two distinct modes depending on the context:
+
+| | **Local (standalone)** | **HuggingFace Spaces (multi-room)** |
+|---|---|---|
+| Entry point | `python main.py` | `server.py` via Docker |
+| Camera | USB/built-in via OpenCV | Browser `getUserMedia` |
+| TTS output | Local speakers (pyttsx3/edge-tts) | MP3 streamed to exhibition browser |
+| Users | Single operator | Multiple rooms, multiple clients per room |
+| Video relay | Direct OpenCV → MJPEG | Browser → base64 POST → server MJPEG |
+| URL | `http://localhost:8000` | `https://huggingface.co/spaces/...` |
+
+---
+
 ## Architecture
+
+### Core Pipeline (Both Modes)
 
 ```
 Camera Frame + Observation History
@@ -28,13 +45,123 @@ Camera Frame + Observation History
 [Web UI]  <--  MJPEG stream + SSE events + REST controls
 ```
 
-**Primary backend:** Google Gemini API — multimodal vision + text in a single call. Handles scene description, change detection, and narration with a judgmental surveillance personality.
+**Primary backend:** Google Gemini API — multimodal vision + text in a single call. Handles scene description, change detection, and narration with a tone-adjustable personality.
 
-**Offline fallback:** Ollama (moondream + llama3.2:3b) — local two-model pipeline. Activates automatically if Gemini fails.
+**Offline fallback (local mode only):** Ollama (moondream + llama3.2:3b) — local two-model pipeline. Activates automatically if Gemini fails.
 
-**Web interface:** FastAPI server with live MJPEG video, Server-Sent Events for real-time state sync, and REST API for controls. Two modes: operator control page and fullscreen exhibition display.
+### Local Mode Architecture
 
-## Requirements
+```
+main.py
+  ├── Camera Thread ──── OpenCV capture → apply effects → JPEG encode
+  ├── Analysis Thread ── Gemini/Ollama vision → narration
+  ├── TTS Thread ─────── pyttsx3/edge-tts → local speakers
+  └── FastAPI Server ─── MJPEG stream + SSE + REST
+```
+
+Three background threads share state through a `SharedState` dataclass with threading locks. The camera captures raw frames, the analysis thread sends them to Gemini, and the TTS thread speaks the narration through local speakers. The web UI is optional — it mirrors the local display.
+
+### HuggingFace Spaces Architecture
+
+```
+Browser (Controller)        server.py              Browser (Exhibition)
+  │                            │                        │
+  ├─ getUserMedia ─────────────┤                        │
+  │   (camera capture)         │                        │
+  │                            │                        │
+  ├─ POST /api/frame ─────────→│                        │
+  │   (base64 JPEG, 4fps)     │                        │
+  │                            ├── [Room State] ───────→│ GET /stream (MJPEG)
+  │                            │                        │
+  │                            ├── Gemini Vision ──────→│ SSE "description"
+  │                            │                        │
+  │                            ├── edge-tts ───────────→│ SSE "audio" → /audio/{ts}
+  │                            │                        │
+  ├─ SSE /events ←────────────┤                        ├─ SSE /events
+  │   (state sync)             │                        │   (state sync + audio cues)
+  │                            │                        │
+  └─ REST /api/* ─────────────→│                        │
+      (controls)               │                        │
+```
+
+No OpenCV, no local speakers, no camera thread. The browser captures the camera via `getUserMedia`, encodes JPEG on a `<canvas>`, and POSTs base64 frames to the server. The server stores frames in memory, runs Gemini analysis in an async background task, generates MP3 audio via edge-tts, and serves everything through MJPEG streaming, SSE events, and REST endpoints.
+
+#### Multi-Room System
+
+Each room is an isolated instance with its own:
+- Gemini vision backend + observation history
+- Frame relay buffer
+- Analysis loop (async background task)
+- Audio file cache
+- Connected clients list
+- Active source designation
+
+Rooms are created by an admin (password-protected), identified by codes like `PANOPT-7X3K`, and expire after 30 minutes of inactivity. Up to 5 rooms can run simultaneously.
+
+#### Multi-Client Video Source
+
+Multiple browsers can connect to the same room. Only one client at a time is the **active video source** — the device whose camera frames are uploaded and analyzed.
+
+- **Client registration:** Each browser generates a UUID (`crypto.randomUUID()`) stored in `sessionStorage` and registers with the server on page load.
+- **Heartbeat:** Every 10 seconds, clients send a keep-alive. Stale clients (no heartbeat for 15s) are automatically removed.
+- **Source designation:** The first controller to connect becomes the source automatically. Any connected device (controller or exhibition) can be manually set as the source via the "Connected Devices" panel.
+- **Frame rejection:** The server returns 403 for frame uploads from non-source clients, preventing visual chaos from multiple uploaders.
+- **Exhibition as source:** The exhibition device can run its own camera — when designated as source, it hides the MJPEG stream, activates `getUserMedia`, and uploads frames.
+- **Camera picker:** The active source device shows a dropdown to switch between available cameras.
+
+---
+
+## HuggingFace Spaces Deployment
+
+### How It's Deployed
+
+The Space runs as a Docker container on HuggingFace infrastructure.
+
+**Dockerfile:**
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 7860
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860"]
+```
+
+**Required secrets** (set in HuggingFace Space settings → Variables and secrets):
+- `GEMINI_API_KEY` — Google Gemini API key
+- `ADMIN_PASSWORD` — Password for creating rooms
+
+**Deployment flow:**
+1. Push to `hf` remote `main` branch: `git push hf feature/hf-spaces:main`
+2. HuggingFace detects the Dockerfile, builds the container
+3. The Space starts `server.py` via uvicorn on port 7860
+4. Users access the lobby at the Space URL
+
+### Pages
+
+| URL | Page | Description |
+|-----|------|-------------|
+| `/` | Lobby | Create room (admin) or join room (code) |
+| `/room/{code}` | Controller | Camera feed + controls + activity log |
+| `/room/{code}/exhibit` | Exhibition | Fullscreen display, no controls, hidden cursor |
+
+### User Flow
+
+1. **Admin** opens the Space URL → enters admin password → clicks **Create**
+2. A room code is generated (e.g. `PANOPT-7X3K`) with links to controller and exhibition
+3. **Admin** opens the controller page → browser requests camera permission
+4. **Admin** clicks **START** → camera feed uploads to server, Gemini analysis begins
+5. **Exhibition device** joins via code or direct link → shows fullscreen MJPEG stream + audio narration
+6. **Additional controllers** can join — only the designated source uploads frames
+7. Source can be switched to any connected device via the "Connected Devices" panel
+8. Room expires after 30 minutes of inactivity
+
+---
+
+## Local Setup (Standalone)
+
+### Requirements
 
 - Windows 10/11 (or any OS with Python 3.9+)
 - USB webcam or built-in camera
@@ -42,18 +169,18 @@ Camera Frame + Observation History
 - Speakers or audio output
 - Gemini API key (free tier available)
 
-## Quick Setup
+### Quick Setup
 
-### 1. Install Python
+#### 1. Install Python
 
 Download Python 3.11+ from [python.org](https://www.python.org/downloads/).
 During installation, **check "Add to PATH"**.
 
-### 2. Get a Gemini API key
+#### 2. Get a Gemini API key
 
 Get a free key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
-### 3. Install dependencies
+#### 3. Install dependencies
 
 ```
 python -m venv venv
@@ -61,132 +188,230 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure your API key
+For local mode, you also need OpenCV:
+```
+pip install opencv-python numpy
+```
+
+#### 4. Configure your API key
 
 Create a `.env` file in the project root:
-
 ```
 GEMINI_API_KEY=your_api_key_here
 ```
 
-### 5. Test your setup
+#### 5. Test your setup
 
 ```
 python setup_check.py
 ```
 
-### 6. Run
-
-Open a terminal (Command Prompt, PowerShell, or Windows Terminal), navigate to the project folder, activate the virtual environment, and start the app:
+#### 6. Run
 
 ```
-cd C:\Users\MartinBielik\Dev\PanopticumApp
-venv\Scripts\activate
 python main.py
 ```
 
-This single command starts everything — the web server, camera system, AI analysis, and TTS all run inside one Python process. There is nothing else to install or start separately.
+This single command starts everything — the web server, camera system, AI analysis, and TTS all run inside one Python process.
 
 Once running, open a browser:
-
 - **Control page:** `http://localhost:8000/` — video feed + interactive controls
 - **Exhibition page:** `http://localhost:8000/exhibit` — fullscreen display, no controls, hidden cursor
 
 The camera and analysis pipeline start **stopped**. Click **START** in the web UI to begin. Click **STOP** to pause (releases camera, zero API calls). The web server stays running either way.
 
-To shut down the whole process, press **Ctrl+C** in the terminal.
+To shut down, press **Ctrl+C** in the terminal.
+
+---
 
 ## Web UI
 
-The control page provides real-time operator controls. The exhibition page shows the same video feed and AI narration overlay but hides all controls for a clean display.
+### Controls (Controller Page)
 
-### Start/Stop
+**Start/Stop** — A single toggle button controls the entire pipeline:
+- **START** (blue) — begins camera capture, AI analysis, and TTS narration
+- **STOP** (red) — releases camera, halts all API calls
 
-The pipeline (camera, AI analysis, TTS) starts stopped on launch. A single toggle button controls the entire pipeline:
+**Video Effects** — Display-only filters (the AI always analyzes the raw frame):
+- **Insta** — warm sepia tones with vignette overlay and rotating motivational messages
+- **Natural** — unprocessed camera feed
+- **CCTV** — grayscale with scanlines, green timestamp, blinking REC indicator
 
-- **START** (green) — opens the camera, begins AI analysis and TTS narration
-- **STOP** (red) — releases the camera, halts all API calls (zero traffic while stopped)
-
-The web server stays running in both states. Worker threads idle-loop rather than being killed, so restarting is instant.
-
-### Video Effects
-
-Four display effects applied to the video stream only (the AI always sees the raw frame):
-
-- **Original** — unprocessed camera feed
-- **CCTV** — grayscale, pixelated, noisy
-- **Night Vision** — green-tinted with noise
-- **Noir** — high-contrast black and white with vignette
-
-### Tone Slider
-
-A slider from 0.0 to 1.0 controls the AI's narration personality:
-
-- **Flattering** (0.0) — supportive, encouraging observations
+**Tone** — Three preset personalities for the AI narration:
+- **Supportive** (0.0) — encouraging, praises everything
 - **Neutral** (0.5) — factual, clinical reporting
-- **Judgmental** (1.0) — dry, sarcastic commentary (default)
+- **Judgmental** (1.0) — critical micromanager, dry commentary
 
-### Video Overlay
+**Sync Toggle** — Links effect and tone: Insta ↔ Supportive, Natural ↔ Neutral, CCTV ↔ Judgmental.
 
-Both pages display a surveillance-style overlay on the video feed:
+**Exhibition Link** — Direct link to open the exhibition view for this room.
 
-- Live timestamp (top-left)
-- Blinking REC indicator (top-right)
-- Camera label (bottom-right)
-- AI narration text with fade-in/fade-out (bottom)
-- Audio indicator when TTS is speaking (bottom-left)
+**Source Controls** (HuggingFace Spaces only):
+- **Source status** — Shows whether this device is the active video source
+- **Camera picker** — Dropdown to switch between available cameras (visible when this device is the source)
 
-### Real-Time Sync
+**Connected Devices** (HuggingFace Spaces only):
+- Lists all connected browsers with role, label, and source status
+- **Set Source** button on each non-source device to switch which device uploads frames
 
-All state changes (start/stop, effects, tone, descriptions, speaking status) sync across connected browsers via Server-Sent Events. Open the control page on a laptop and the exhibit page on a TV — they stay in sync.
+**Activity Log** — Scrollable panel showing the last 10 AI observations with timestamps and tone tags. Collapsible via the × button.
 
-### REST API
+### Exhibition Page
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/active` | GET/POST | Start/stop the pipeline (`{active: bool}`) |
-| `/api/effect` | GET/POST | Get/set video effect (`{effect: str}`) |
-| `/api/tone` | GET/POST | Get/set tone value (`{value: 0.0-1.0}`) |
-| `/api/status` | GET | Full state snapshot |
-| `/stream` | GET | MJPEG video stream |
-| `/events` | GET | SSE event stream |
+Fullscreen display with no controls, no cursor, black background. Shows the video feed with effect overlays and plays TTS audio. In CCTV mode, displays Radiohead's "Fitter Happier" lyrics every 4th analysis cycle when tone is judgmental.
+
+### Overlays
+
+Both pages display effect-specific overlays on the video:
+- **CCTV mode:** Live timestamp (top-left), blinking REC indicator (top-right), CAM-01 label (bottom-right), scanline filter, lyrics text
+- **Insta mode:** Vignette border, rotating motivational messages with serif typography and blur backdrop
+- **Natural mode:** No overlays
+
+---
+
+## Fitter Happier (Judgmental Mode)
+
+When tone is set to Judgmental (≥ 0.75), every 4th analysis cycle triggers a robotic female voice reading a line from Radiohead's "Fitter Happier." The lyrics appear as green terminal text in CCTV mode. 30 lines cycle endlessly.
+
+---
+
+## REST API Reference
+
+### Room Management
+
+| Endpoint | Method | Body | Response |
+|----------|--------|------|----------|
+| `/api/create-room` | POST | `{password}` | `{code}` or 403 |
+| `/api/join-room` | POST | `{code}` | `{code}` or 404 |
+| `/api/rooms` | GET | — | `{rooms: [...]}` |
+
+### Room-Scoped Control
+
+All room-scoped endpoints are prefixed with `/room/{code}/api/`.
+
+| Endpoint | Method | Body | Response |
+|----------|--------|------|----------|
+| `status` | GET | — | `{active, effect, tone, description, description_timestamp}` |
+| `active` | GET/POST | `{active: bool}` | `{active: bool}` |
+| `effect` | GET/POST | `{effect: str}` | `{effect: str}` |
+| `tone` | GET/POST | `{value: float}` | `{value: float}` |
+| `frame` | POST | `{frame: base64, client_id: str}` | `{ok: true}` or 403 |
+| `register` | POST | `{client_id, role, label}` | `{ok, is_source, clients}` |
+| `heartbeat` | POST | `{client_id}` | `{ok: true}` |
+| `set-source` | POST | `{client_id}` | `{ok, clients}` |
+| `unregister` | POST | `{client_id}` | `{ok: true}` |
+
+### Streaming
+
+| Endpoint | Type | Description |
+|----------|------|-------------|
+| `/room/{code}/stream` | MJPEG | Continuous JPEG frames (`multipart/x-mixed-replace`) |
+| `/room/{code}/events` | SSE | Real-time events: `active`, `description`, `effect`, `tone`, `lyrics`, `audio`, `audio_robotic`, `clients` |
+| `/room/{code}/audio/{timestamp}` | HTTP | MP3 audio file |
+
+### SSE Event Types
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `active` | `{active: bool}` | Pipeline started/stopped |
+| `description` | `{text, timestamp, tone}` | New AI observation |
+| `effect` | `{effect: str}` | Effect changed |
+| `tone` | `{value: float}` | Tone changed |
+| `lyrics` | `{text: str}` | Fitter Happier lyrics line |
+| `audio` | `{url: str}` | New narration MP3 ready |
+| `audio_robotic` | `{url: str}` | New robotic lyrics MP3 ready |
+| `clients` | `{clients: [...], active_source: str}` | Client list changed (join/leave/source switch) |
+
+---
 
 ## How It Works
 
-1. **Start** — Operator clicks START in the web UI. Camera opens, analysis begins
-2. **Introduction** — Gemini describes the scene in a full sentence with the current tone
-3. **Change detection** — Subsequent frames are compared against observation history. If nothing changed: silence. If something changed: a 3-8 word status update is spoken
-4. **Stale refresh** — If silent for 10+ seconds, a scene status update is forced (configurable via `stale_timeout`)
-5. **Fallback** — If Gemini hits rate limits or goes down, the app automatically switches to the local Ollama pipeline
-6. **Stop** — Operator clicks STOP. Camera releases, API calls cease, TTS goes silent
+1. **Start** — Operator clicks START. Camera opens (local) or browser captures (HF Spaces). Analysis begins.
+2. **Introduction** — Gemini describes the scene in a full sentence with the current tone personality.
+3. **Change detection** — Subsequent frames are compared against observation history (max 10). If nothing changed: silence. If something changed: a 3-8 word status update.
+4. **Stale refresh** — If silent for 10+ seconds, a scene description is forced (configurable via `stale_timeout`).
+5. **TTS** — New descriptions are spoken via edge-tts. In local mode, through speakers. In HF Spaces, MP3 is streamed to the exhibition browser.
+6. **Fitter Happier** — Every 4th cycle in judgmental mode: robotic female voice reads lyrics.
+7. **Fallback** (local only) — If Gemini hits rate limits or goes down, the app switches to the local Ollama pipeline.
+8. **Stop** — Operator clicks STOP. Camera releases, API calls cease, TTS goes silent.
+
+---
+
+## File Structure
+
+```
+PanopticumApp/
+├── main.py              # Local standalone entry point (camera + analysis + TTS threads)
+├── server.py            # FastAPI web server (HF Spaces multi-room deployment)
+├── rooms.py             # Room + Client management (dataclasses, registration, cleanup)
+├── vision.py            # Vision backends (Gemini API, Ollama fallback)
+├── tts.py               # Text-to-speech (edge-tts async, pyttsx3 local)
+├── tone.py              # Tone/personality system (0.0 supportive → 1.0 judgmental)
+├── effects.py           # Video effects (CCTV, Insta, Natural) — local mode only
+├── narrator.py          # Ollama narrator pipeline — local fallback only
+├── overlay.py           # OpenCV video overlays — local mode only
+├── setup_check.py       # Setup validation utility
+├── config.yaml          # Configuration (camera, vision, TTS, timing, etc.)
+├── requirements.txt     # Python dependencies
+├── Dockerfile           # HuggingFace Spaces container build
+├── .env                 # API keys (not committed)
+│
+├── static/
+│   ├── app.js           # Frontend logic (controller + exhibition, client registration)
+│   └── style.css        # Styling (corporate surveillance aesthetic)
+│
+├── templates/
+│   ├── lobby.html       # Room join/create page
+│   ├── control.html     # Controller page (camera + controls + client panel)
+│   └── exhibit.html     # Exhibition page (fullscreen, audio playback)
+│
+└── prompts/
+    ├── gemini_surveillance.txt       # Gemini unified prompt (vision + narration)
+    ├── narrator_surveillance.txt     # Ollama fallback narrator prompt
+    └── surveillance.txt              # Vision-only prompt
+```
+
+---
 
 ## Customization
 
 ### Change the voice, timing, or camera
 
-Edit `config.yaml`. All settings are documented with comments.
+Edit `config.yaml`. Key settings:
+
+```yaml
+timing:
+  analysis_interval: 3    # Seconds between AI analyses
+
+tts:
+  backend: "edge-tts"     # "edge-tts" (online) or "pyttsx3" (offline)
+  edge_tts:
+    voice: "en-US-GuyNeural"
+    rate: "-15%"
+    pitch: "-15Hz"
+
+camera:
+  index: 0                # 0 = default, 1 = second camera (local mode only)
+```
 
 ### Change what the AI says
 
 Edit the prompt files in `prompts/`:
-
 - `gemini_surveillance.txt` — Gemini unified prompt (vision + narration + judgment)
 - `narrator_surveillance.txt` — Ollama fallback narrator prompt
 - `surveillance.txt` — Vision-only prompt (used when narrator is disabled)
 
-### Use Ollama instead of Gemini (fully offline)
+### Use Ollama instead of Gemini (fully offline, local mode only)
 
 In `config.yaml`:
-
 ```yaml
 vision:
-  backend: "ollama"    # switch from "gemini" to "ollama"
+  backend: "ollama"
 tts:
-  backend: "pyttsx3"   # offline TTS
+  backend: "pyttsx3"
 ```
 
 You'll need Ollama installed with models pulled:
-
 ```
 ollama pull moondream
 ollama pull llama3.2:3b
@@ -196,24 +421,65 @@ ollama pull llama3.2:3b
 
 Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free. Zero cost while stopped.
 
+---
+
 ## For the Exhibition
 
+### Local deployment
 - Run `python main.py` on the operator laptop
 - Open `http://localhost:8000/exhibit` on the display device (TV, projector, second monitor)
 - Open `http://localhost:8000/` on the operator's laptop or phone to control start/stop, effects, and tone
-- Click START when ready to begin the installation
-- Disable Windows sleep and screen saver
-- Place a speaker near the display (not next to the laptop)
-- The system auto-recovers if the camera disconnects or Gemini goes down
+- Click START when ready
+
+### HuggingFace Spaces deployment
+- Create a room via the lobby with the admin password
+- Open the **controller** link on the operator's device
+- Open the **exhibition** link on the display device (TV, projector, kiosk)
+- Grant camera permission on the controller, click START
+- The exhibition device shows the fullscreen feed with audio narration
+- To use the display device's own camera: set it as the source in "Connected Devices"
+
+### Tips
+- Disable sleep and screen saver on the display device
+- Place speakers near the display, not the operator laptop
+- The system auto-recovers from camera disconnects and Gemini rate limits
+
+---
 
 ## Troubleshooting
 
-**Camera not detected**: Try changing `camera > index` in `config.yaml` to `1` or `2`.
+**Camera not detected (local):** Try changing `camera > index` in `config.yaml` to `1` or `2`.
 
-**Gemini 429 errors**: You've hit the API rate limit. The app will retry with backoff. If persistent, increase `analysis_interval` in `config.yaml` or check your billing at [ai.dev/rate-limit](https://ai.dev/rate-limit).
+**Camera not detected (HF Spaces):** The browser must grant camera permission. Check that the site is served over HTTPS (HuggingFace Spaces provides this).
 
-**No sound**: Check Windows audio output device. Make sure speakers are connected and volume is up.
+**Gemini 429 errors:** API rate limit. The app retries with backoff automatically. If persistent, increase `analysis_interval` in `config.yaml`.
 
-**Ollama not connecting**: Make sure Ollama is running (`ollama serve`). Download from [ollama.com/download](https://ollama.com/download).
+**No sound (local):** Check Windows audio output device. Make sure speakers are connected and volume is up.
 
-**Black video after stopping**: Expected. The camera is released when stopped. Click START to resume.
+**No sound (HF Spaces):** The exhibition page must receive a user interaction (click/tap) before browsers allow audio autoplay. Click anywhere on the exhibition page after loading.
+
+**Multiple controllers uploading frames:** Only the designated source client's frames are accepted. Other controllers' frame uploads are rejected with 403. Switch the source via the "Connected Devices" panel.
+
+**Ollama not connecting (local only):** Make sure Ollama is running (`ollama serve`). Download from [ollama.com/download](https://ollama.com/download).
+
+**Black video after stopping:** Expected. The camera is released when stopped. Click START to resume.
+
+**Stale client in device list:** Clients are cleaned up 15 seconds after their last heartbeat. Closing a tab triggers an immediate unregister via `sendBeacon`.
+
+---
+
+## Dependencies
+
+```
+PyYAML>=6.0                # Configuration
+edge-tts>=6.1.0            # Text-to-speech (MP3 generation)
+google-genai>=1.0.0        # Gemini API client
+python-dotenv>=1.0.0       # .env file support
+fastapi>=0.115.0           # Web framework
+uvicorn[standard]>=0.32.0  # ASGI server
+jinja2>=3.1.0              # Template rendering
+sse-starlette>=2.0.0       # Server-Sent Events
+python-multipart>=0.0.9    # Form data parsing
+```
+
+Local mode additionally requires: `opencv-python`, `numpy`
