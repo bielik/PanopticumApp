@@ -13,11 +13,10 @@ def apply_effect(frame: np.ndarray, effect_name: str) -> np.ndarray:
     """Apply a named visual effect to a frame. Returns a new array."""
     if effect_name == "cctv":
         return _cctv(frame)
-    elif effect_name == "nightvision":
-        return _nightvision(frame)
-    elif effect_name == "noir":
-        return _noir(frame)
+    elif effect_name == "bright":
+        return _bright(frame)
     else:
+        # "natural" or any unknown → passthrough
         return frame
 
 
@@ -40,47 +39,23 @@ def _cctv(frame: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(noisy, cv2.COLOR_GRAY2BGR)
 
 
-def _nightvision(frame: np.ndarray) -> np.ndarray:
-    """Green-channel boost, zero red/blue, noise."""
-    h, w = frame.shape[:2]
-    result = frame.copy()
+def _bright(frame: np.ndarray) -> np.ndarray:
+    """Warm tones, increased brightness and saturation."""
+    # Convert to HSV for saturation/brightness boost
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
 
-    # Zero red and blue, boost green
-    result[:, :, 0] = 0   # Blue
-    result[:, :, 2] = 0   # Red
-    result[:, :, 1] = cv2.add(
-        result[:, :, 1],
-        np.full((h, w), 40, dtype=np.uint8),
-    )
+    # Boost saturation by 30%
+    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.3, 0, 255)
+    # Boost brightness by 20%
+    hsv[:, :, 2] = np.clip(hsv[:, :, 2] * 1.2 + 15, 0, 255)
 
-    # Add green-tinted noise
-    noise = np.zeros((h, w, 3), dtype=np.uint8)
-    noise[:, :, 1] = np.random.randint(0, 20, (h, w), dtype=np.uint8)
-    result = cv2.add(result, noise)
+    result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
-    return result
+    # Warm color grade: boost yellow/orange tones
+    # Slightly increase red and green channels, reduce blue
+    b, g, r = cv2.split(result)
+    r = np.clip(r.astype(np.float32) * 1.08 + 8, 0, 255).astype(np.uint8)
+    g = np.clip(g.astype(np.float32) * 1.04 + 4, 0, 255).astype(np.uint8)
+    b = np.clip(b.astype(np.float32) * 0.92, 0, 255).astype(np.uint8)
 
-
-def _noir(frame: np.ndarray) -> np.ndarray:
-    """High-contrast grayscale + vignette + grain."""
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    h, w = gray.shape
-
-    # CLAHE for high contrast
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    contrast = clahe.apply(gray)
-
-    # Vignette: Gaussian kernel mask
-    sigma_x = w / 3
-    sigma_y = h / 3
-    kernel_x = cv2.getGaussianKernel(w, int(sigma_x))
-    kernel_y = cv2.getGaussianKernel(h, int(sigma_y))
-    vignette_mask = (kernel_y @ kernel_x.T)
-    vignette_mask = vignette_mask / vignette_mask.max()
-    vignetted = (contrast * vignette_mask).astype(np.uint8)
-
-    # Film grain
-    grain = np.random.randint(-15, 15, (h, w), dtype=np.int16)
-    result = np.clip(vignetted.astype(np.int16) + grain, 0, 255).astype(np.uint8)
-
-    return cv2.cvtColor(result, cv2.COLOR_GRAY2BGR)
+    return cv2.merge([b, g, r])

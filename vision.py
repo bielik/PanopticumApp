@@ -162,18 +162,18 @@ class GeminiVision:
 
         if needs_introduction:
             mode_text = (
-                "This is your FIRST report for this camera. Provide a one-sentence scene introduction in surveillance tone. "
-                "Describe who and what is in frame, the setting, and overall status. 8-15 words."
+                "This is your FIRST report for this workstation. Describe who is present, "
+                "what they appear to be doing, and provide an initial performance assessment. 8-15 words."
             )
         elif seconds_since_speech >= self.stale_timeout:
             mode_text = (
-                "It has been a while since your last report. Provide a brief status update on the current scene, 4-8 words. "
+                "It has been a while since your last report. Provide a brief status update on current work activity, 4-8 words. "
                 "Always provide a description even if nothing changed."
             )
         else:
             mode_text = (
                 "If NOTHING meaningful changed since the last observation, respond with exactly: NO_CHANGE\n"
-                "If something DID change, respond with a 3-8 word surveillance status update."
+                "If something DID change in work behavior, respond with a 3-8 word performance update."
             )
 
         # Build history context

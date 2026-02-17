@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory="templates")
 state = None
 config = None
 
-VALID_EFFECTS = ["original", "cctv", "nightvision", "noir"]
+VALID_EFFECTS = ["bright", "natural", "cctv"]
 
 
 # ---------------------------------------------------------------------------

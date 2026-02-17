@@ -11,11 +11,11 @@ server:
 
 # --- Video Effects ---
 effects:
-  default: "original"           # "original", "cctv", "nightvision", or "noir"
+  default: "natural"            # "bright", "natural", or "cctv"
 
 # --- Tone ---
 tone:
-  default: 1.0                  # 0.0 = flattering, 0.5 = neutral, 1.0 = judgmental
+  default: 0.5                  # 0.0 = supportive, 0.5 = neutral, 1.0 = judgmental
 
 # --- Camera ---
 camera:

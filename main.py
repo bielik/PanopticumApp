@@ -73,8 +73,8 @@ class SharedState:
     is_speaking: bool = False
 
     # Web UI state
-    current_effect: str = "original"
-    tone_value: float = 1.0
+    current_effect: str = "natural"
+    tone_value: float = 0.5
     tone_preamble: str = ""
 
 
@@ -433,7 +433,7 @@ def main():
     state.tone_preamble = build_tone_preamble(default_tone)
 
     # Initialize effect from config defaults
-    state.current_effect = config.get("effects", {}).get("default", "original")
+    state.current_effect = config.get("effects", {}).get("default", "natural")
 
     # Share state and config with the web server
     server.state = state
