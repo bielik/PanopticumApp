@@ -11,6 +11,34 @@
     const effectButtons = document.querySelectorAll(".effect-btn");
     const toneSlider = document.getElementById("tone-slider");
     const toneValueEl = document.getElementById("tone-value");
+    const startStopBtn = document.getElementById("start-stop-btn");
+
+    // --- Active state ---
+    let isActive = false;
+
+    function updateStartStopButton(active) {
+        isActive = active;
+        if (!startStopBtn) return;
+        if (active) {
+            startStopBtn.textContent = "STOP";
+            startStopBtn.classList.remove("inactive");
+            startStopBtn.classList.add("active");
+        } else {
+            startStopBtn.textContent = "START";
+            startStopBtn.classList.remove("active");
+            startStopBtn.classList.add("inactive");
+        }
+    }
+
+    if (startStopBtn) {
+        startStopBtn.addEventListener("click", function () {
+            fetch("/api/active", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ active: !isActive }),
+            });
+        });
+    }
 
     // --- Timestamp clock ---
     function updateTimestamp() {
@@ -53,6 +81,11 @@
 
     // --- SSE listeners ---
     const evtSource = new EventSource("/events");
+
+    evtSource.addEventListener("active", function (e) {
+        const data = JSON.parse(e.data);
+        updateStartStopButton(data.active);
+    });
 
     evtSource.addEventListener("description", function (e) {
         const data = JSON.parse(e.data);
@@ -146,6 +179,7 @@
     fetch("/api/status")
         .then(function (r) { return r.json(); })
         .then(function (data) {
+            updateStartStopButton(data.active);
             highlightEffect(data.effect);
             if (toneSlider) toneSlider.value = data.tone;
             updateToneLabel(data.tone);

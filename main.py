@@ -69,6 +69,7 @@ class SharedState:
 
     # Control
     running: bool = True
+    active: bool = False       # Start stopped; user clicks Start in web UI
     is_speaking: bool = False
 
     # Web UI state
@@ -83,29 +84,54 @@ class SharedState:
 def camera_worker(config, state: SharedState):
     """Capture frames, apply effects, encode JPEG for web stream."""
     cam_cfg = config["camera"]
-    cap = cv2.VideoCapture(cam_cfg["index"])
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+    cap = None  # opened lazily when state.active becomes True
 
-    if not cap.isOpened():
-        log.error(f"Cannot open camera index {cam_cfg['index']}")
-        return
+    def _open_camera():
+        c = cv2.VideoCapture(cam_cfg["index"])
+        c.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
+        c.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+        if c.isOpened():
+            log.info(f"Camera opened: index={cam_cfg['index']} ({cam_cfg['width']}x{cam_cfg['height']})")
+        else:
+            log.error(f"Cannot open camera index {cam_cfg['index']}")
+        return c
 
-    log.info(f"Camera opened: index={cam_cfg['index']} ({cam_cfg['width']}x{cam_cfg['height']})")
+    def _release_camera(c):
+        if c is not None and c.isOpened():
+            c.release()
+            log.info("Camera released.")
+        with state.lock:
+            state.display_frame_jpeg = None
+            state.frame_ready.clear()
 
     try:
         while state.running:
+            # Idle-loop when not active — camera stays released
+            if not state.active:
+                _release_camera(cap)
+                cap = None
+                while state.running and not state.active:
+                    time.sleep(0.5)
+                if not state.running:
+                    break
+                # Re-open camera on activation
+                cap = _open_camera()
+                continue
+
+            # Ensure camera is open
+            if cap is None or not cap.isOpened():
+                cap = _open_camera()
+
             ret, frame = cap.read()
 
             if not ret or frame is None:
                 # Camera disconnected — show static noise
                 frame = create_no_signal_frame(cam_cfg["width"], cam_cfg["height"])
                 # Try to reconnect
-                cap.release()
+                _release_camera(cap)
+                cap = None
                 time.sleep(2)
-                cap = cv2.VideoCapture(cam_cfg["index"])
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
+                cap = _open_camera()
             else:
                 if cam_cfg["mirror"]:
                     frame = cv2.flip(frame, 1)
@@ -133,8 +159,7 @@ def camera_worker(config, state: SharedState):
     except Exception as e:
         log.error(f"Camera worker error: {e}", exc_info=True)
     finally:
-        cap.release()
-        log.info("Camera released.")
+        _release_camera(cap)
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +196,11 @@ def analysis_worker(config, state: SharedState):
     max_failures = 5
 
     while state.running:
+        # Idle-loop when not active — no API calls
+        if not state.active:
+            time.sleep(0.5)
+            continue
+
         cycle_start = time.time()
 
         # Wait for a frame
@@ -221,7 +251,7 @@ def analysis_worker(config, state: SharedState):
 
                 # Wait for TTS to pick up this narration and finish speaking it
                 time.sleep(0.5)  # let TTS thread detect the new description
-                while state.running:
+                while state.running and state.active:
                     with state.lock:
                         speaking = state.is_speaking
                     if not speaking:
@@ -347,6 +377,11 @@ def tts_worker(config, state: SharedState):
     last_spoken = ""
 
     while state.running:
+        # Idle-loop when not active — no TTS
+        if not state.active:
+            time.sleep(0.5)
+            continue
+
         with state.lock:
             description = state.latest_description
 

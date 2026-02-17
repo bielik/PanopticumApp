@@ -14,11 +14,16 @@ Camera Frame + Observation History
     |                      (vision + narration + memory in ONE call)
     v
 [edge-tts]  -->  robotic voice (only when not NO_CHANGE)
+    |
+    v
+[Web UI]  <--  MJPEG stream + SSE events + REST controls
 ```
 
 **Primary backend:** Google Gemini API — multimodal vision + text in a single call. Handles scene description, change detection, and narration with a judgmental surveillance personality.
 
 **Offline fallback:** Ollama (moondream + llama3.2:3b) — local two-model pipeline. Activates automatically if Gemini fails.
+
+**Web interface:** FastAPI server with live MJPEG video, Server-Sent Events for real-time state sync, and REST API for controls. Two modes: operator control page and fullscreen exhibition display.
 
 ## Requirements
 
@@ -63,18 +68,88 @@ python setup_check.py
 
 ### 6. Run
 
+Open a terminal (Command Prompt, PowerShell, or Windows Terminal), navigate to the project folder, activate the virtual environment, and start the app:
+
 ```
+cd C:\Users\MartinBielik\Dev\PanopticumApp
+venv\Scripts\activate
 python main.py
 ```
 
-Or double-click `run.bat`. Press **ESC** to quit, **F** to toggle fullscreen.
+This single command starts everything — the web server, camera system, AI analysis, and TTS all run inside one Python process. There is nothing else to install or start separately.
+
+Once running, open a browser:
+
+- **Control page:** `http://localhost:8000/` — video feed + interactive controls
+- **Exhibition page:** `http://localhost:8000/exhibit` — fullscreen display, no controls, hidden cursor
+
+The camera and analysis pipeline start **stopped**. Click **START** in the web UI to begin. Click **STOP** to pause (releases camera, zero API calls). The web server stays running either way.
+
+To shut down the whole process, press **Ctrl+C** in the terminal.
+
+## Web UI
+
+The control page provides real-time operator controls. The exhibition page shows the same video feed and AI narration overlay but hides all controls for a clean display.
+
+### Start/Stop
+
+The pipeline (camera, AI analysis, TTS) starts stopped on launch. A single toggle button controls the entire pipeline:
+
+- **START** (green) — opens the camera, begins AI analysis and TTS narration
+- **STOP** (red) — releases the camera, halts all API calls (zero traffic while stopped)
+
+The web server stays running in both states. Worker threads idle-loop rather than being killed, so restarting is instant.
+
+### Video Effects
+
+Four display effects applied to the video stream only (the AI always sees the raw frame):
+
+- **Original** — unprocessed camera feed
+- **CCTV** — grayscale, pixelated, noisy
+- **Night Vision** — green-tinted with noise
+- **Noir** — high-contrast black and white with vignette
+
+### Tone Slider
+
+A slider from 0.0 to 1.0 controls the AI's narration personality:
+
+- **Flattering** (0.0) — supportive, encouraging observations
+- **Neutral** (0.5) — factual, clinical reporting
+- **Judgmental** (1.0) — dry, sarcastic commentary (default)
+
+### Video Overlay
+
+Both pages display a surveillance-style overlay on the video feed:
+
+- Live timestamp (top-left)
+- Blinking REC indicator (top-right)
+- Camera label (bottom-right)
+- AI narration text with fade-in/fade-out (bottom)
+- Audio indicator when TTS is speaking (bottom-left)
+
+### Real-Time Sync
+
+All state changes (start/stop, effects, tone, descriptions, speaking status) sync across connected browsers via Server-Sent Events. Open the control page on a laptop and the exhibit page on a TV — they stay in sync.
+
+### REST API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/active` | GET/POST | Start/stop the pipeline (`{active: bool}`) |
+| `/api/effect` | GET/POST | Get/set video effect (`{effect: str}`) |
+| `/api/tone` | GET/POST | Get/set tone value (`{value: 0.0-1.0}`) |
+| `/api/status` | GET | Full state snapshot |
+| `/stream` | GET | MJPEG video stream |
+| `/events` | GET | SSE event stream |
 
 ## How It Works
 
-1. **Introduction** — On launch, Gemini describes the scene in a full sentence with a judgmental surveillance tone
-2. **Change detection** — Subsequent frames are compared against observation history. If nothing changed: silence. If something changed: a 3-8 word status update is spoken
-3. **Stale refresh** — If silent for 10+ seconds, a scene status update is forced (configurable via `stale_timeout`)
-4. **Fallback** — If Gemini hits rate limits or goes down, the app automatically switches to the local Ollama pipeline
+1. **Start** — Operator clicks START in the web UI. Camera opens, analysis begins
+2. **Introduction** — Gemini describes the scene in a full sentence with the current tone
+3. **Change detection** — Subsequent frames are compared against observation history. If nothing changed: silence. If something changed: a 3-8 word status update is spoken
+4. **Stale refresh** — If silent for 10+ seconds, a scene status update is forced (configurable via `stale_timeout`)
+5. **Fallback** — If Gemini hits rate limits or goes down, the app automatically switches to the local Ollama pipeline
+6. **Stop** — Operator clicks STOP. Camera releases, API calls cease, TTS goes silent
 
 ## Customization
 
@@ -110,14 +185,16 @@ ollama pull llama3.2:3b
 
 ### Cost
 
-Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free.
+Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free. Zero cost while stopped.
 
 ## For the Exhibition
 
+- Run `python main.py` on the operator laptop
+- Open `http://localhost:8000/exhibit` on the display device (TV, projector, second monitor)
+- Open `http://localhost:8000/` on the operator's laptop or phone to control start/stop, effects, and tone
+- Click START when ready to begin the installation
 - Disable Windows sleep and screen saver
-- Connect an external monitor via HDMI for the TV display
-- Place a speaker near the TV (not next to the laptop)
-- Use `run.bat` for easy startup
+- Place a speaker near the display (not next to the laptop)
 - The system auto-recovers if the camera disconnects or Gemini goes down
 
 ## Troubleshooting
@@ -129,3 +206,5 @@ Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free.
 **No sound**: Check Windows audio output device. Make sure speakers are connected and volume is up.
 
 **Ollama not connecting**: Make sure Ollama is running (`ollama serve`). Download from [ollama.com/download](https://ollama.com/download).
+
+**Black video after stopping**: Expected. The camera is released when stopped. Click START to resume.

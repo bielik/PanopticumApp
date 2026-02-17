@@ -88,6 +88,7 @@ async def _sse_generator():
     last_speaking = False
     last_effect = ""
     last_tone = -1.0
+    last_active = None
 
     while True:
         events = []
@@ -98,6 +99,11 @@ async def _sse_generator():
             speaking = state.is_speaking
             effect = state.current_effect
             tone = state.tone_value
+            active = state.active
+
+        if active != last_active:
+            last_active = active
+            events.append(("active", json.dumps({"active": active})))
 
         if desc != last_description:
             last_description = desc
@@ -141,12 +147,32 @@ async def sse_events():
 # ---------------------------------------------------------------------------
 # REST API
 # ---------------------------------------------------------------------------
+class ActiveRequest(BaseModel):
+    active: bool
+
+
 class EffectRequest(BaseModel):
     effect: str
 
 
 class ToneRequest(BaseModel):
     value: float
+
+
+@app.get("/api/active")
+async def get_active():
+    """Get current active (running pipeline) state."""
+    with state.lock:
+        return {"active": state.active}
+
+
+@app.post("/api/active")
+async def set_active(req: ActiveRequest):
+    """Start or stop the camera + analysis + TTS pipeline."""
+    with state.lock:
+        state.active = req.active
+    log.info(f"Pipeline {'STARTED' if req.active else 'STOPPED'}")
+    return {"active": req.active}
 
 
 @app.get("/api/effect")
@@ -194,6 +220,7 @@ async def get_status():
     """Full status snapshot."""
     with state.lock:
         return {
+            "active": state.active,
             "effect": state.current_effect,
             "tone": state.tone_value,
             "description": state.latest_description,

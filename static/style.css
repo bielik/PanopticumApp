@@ -167,6 +167,44 @@ body {
     white-space: nowrap;
 }
 
+/* Start/Stop button */
+.start-stop-btn {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 8px 22px;
+    border: 2px solid;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.start-stop-btn.inactive {
+    background: rgba(0, 255, 65, 0.15);
+    border-color: #00ff41;
+    color: #00ff41;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.start-stop-btn.inactive:hover {
+    background: rgba(0, 255, 65, 0.3);
+    box-shadow: 0 0 16px rgba(0, 255, 65, 0.5);
+}
+
+.start-stop-btn.active {
+    background: rgba(255, 0, 0, 0.15);
+    border-color: #ff0000;
+    color: #ff0000;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+}
+
+.start-stop-btn.active:hover {
+    background: rgba(255, 0, 0, 0.3);
+    box-shadow: 0 0 16px rgba(255, 0, 0, 0.5);
+}
+
 /* Effect buttons */
 .effect-btn {
     background: transparent;
