@@ -22,7 +22,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from rooms import Room, cleanup_expired, create_room, get_room, rooms
+from rooms import (
+    Room, cleanup_expired, cleanup_stale_clients, create_room,
+    get_client_list, get_room, heartbeat_client, register_client, rooms,
+    set_active_source, unregister_client,
+)
 from tone import build_tone_preamble
 from tts import generate_robotic_speech, generate_speech
 
@@ -110,11 +114,18 @@ async def startup_cleanup_task():
     async def _cleanup_loop():
         while True:
             cleanup_expired()
-            # Also clean up old audio files from rooms
             for room in rooms.values():
                 _cleanup_audio(room)
             await asyncio.sleep(60)
+
+    async def _client_cleanup_loop():
+        while True:
+            for room in rooms.values():
+                cleanup_stale_clients(room)
+            await asyncio.sleep(5)
+
     asyncio.create_task(_cleanup_loop())
+    asyncio.create_task(_client_cleanup_loop())
 
 
 def _cleanup_audio(room: Room):
@@ -220,6 +231,22 @@ class ToneRequest(BaseModel):
 
 class FrameRequest(BaseModel):
     frame: str  # base64-encoded JPEG
+    client_id: str = ""  # source client identifier
+
+
+class RegisterRequest(BaseModel):
+    client_id: str
+    role: str
+    label: str = ""
+
+class HeartbeatRequest(BaseModel):
+    client_id: str
+
+class SetSourceRequest(BaseModel):
+    client_id: str
+
+class UnregisterRequest(BaseModel):
+    client_id: str
 
 
 @app.get("/room/{code}/api/status")
@@ -308,6 +335,70 @@ async def room_set_tone(code: str, req: ToneRequest):
 
 
 # ---------------------------------------------------------------------------
+# Client management API
+# ---------------------------------------------------------------------------
+@app.post("/room/{code}/api/register")
+async def room_register_client(code: str, req: RegisterRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    if req.role not in ("controller", "exhibition"):
+        return JSONResponse(status_code=400, content={"error": "Invalid role"})
+    client = register_client(room, req.client_id, req.role, req.label)
+    room.touch()
+    return {
+        "ok": True,
+        "is_source": client.id == room.active_source_client_id,
+        "clients": get_client_list(room),
+    }
+
+
+@app.post("/room/{code}/api/heartbeat")
+async def room_heartbeat(code: str, req: HeartbeatRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    found = heartbeat_client(room, req.client_id)
+    if not found:
+        return JSONResponse(status_code=404, content={"error": "Client not found"})
+    room.touch()
+    return {"ok": True}
+
+
+@app.post("/room/{code}/api/set-source")
+async def room_set_source(code: str, req: SetSourceRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    ok = set_active_source(room, req.client_id)
+    if not ok:
+        return JSONResponse(status_code=404, content={"error": "Client not found"})
+    room.touch()
+    return {"ok": True, "clients": get_client_list(room)}
+
+
+@app.post("/room/{code}/api/unregister")
+async def room_unregister_client(code: str, req: Request):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    try:
+        body = await req.json()
+        client_id = body.get("client_id", "")
+    except Exception:
+        # sendBeacon may send text/plain; attempt raw body parse
+        try:
+            raw = await req.body()
+            body = json.loads(raw)
+            client_id = body.get("client_id", "")
+        except Exception:
+            return JSONResponse(status_code=400, content={"error": "Invalid body"})
+    if client_id:
+        unregister_client(room, client_id)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
 # Frame upload (controller -> server)
 # ---------------------------------------------------------------------------
 @app.post("/room/{code}/api/frame")
@@ -315,6 +406,11 @@ async def room_upload_frame(code: str, req: FrameRequest):
     room = get_room(code)
     if not room:
         return JSONResponse(status_code=404, content={"error": "Room not found"})
+
+    # Reject frames from non-source clients
+    if room.active_source_client_id:
+        if not req.client_id or req.client_id != room.active_source_client_id:
+            return JSONResponse(status_code=403, content={"error": "Not the active source"})
 
     try:
         # Strip data URL prefix if present
@@ -373,6 +469,7 @@ async def _sse_generator(room: Room):
     last_active = None
     last_lyrics = ""
     last_lyrics_time = 0.0
+    last_clients_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -385,6 +482,7 @@ async def _sse_generator(room: Room):
         tone = room.tone_value
         lyrics = room.lyrics_line
         lyrics_time = room.lyrics_timestamp
+        clients_version = room._clients_version
 
         if active != last_active:
             last_active = active
@@ -410,6 +508,13 @@ async def _sse_generator(room: Room):
             last_lyrics_time = lyrics_time
             if lyrics:
                 events.append(("lyrics", json.dumps({"text": lyrics})))
+
+        if clients_version != last_clients_version:
+            last_clients_version = clients_version
+            events.append(("clients", json.dumps({
+                "clients": get_client_list(room),
+                "active_source": room.active_source_client_id,
+            })))
 
         # Emit audio events for any new audio files (decoupled from description timing)
         for audio_ts in list(room.audio_files.keys()):

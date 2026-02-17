@@ -283,6 +283,25 @@ body {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
 
+/* --- Exhibition link --- */
+.exhibit-link {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #8b8fa3;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.exhibit-link:hover {
+    color: #4f46e5;
+    background: #f0f1f5;
+}
+
 /* --- Pill button group --- */
 .pill-group {
     display: flex;
@@ -528,6 +547,162 @@ body {
     color: #1a1a2e;
 }
 
+/* --- Source controls --- */
+.controls-source {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
+}
+
+.source-status {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8b8fa3;
+}
+
+.source-status.is-source {
+    color: #059669;
+    font-weight: 600;
+}
+
+.camera-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.camera-select {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    outline: none;
+    cursor: pointer;
+    max-width: 260px;
+    transition: border-color 0.2s;
+}
+
+.camera-select:focus {
+    border-color: #4f46e5;
+}
+
+/* --- Client panel --- */
+.client-panel {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
+}
+
+.client-panel-header {
+    margin-bottom: 10px;
+}
+
+.client-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.client-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    font-size: 0.8rem;
+    color: #374151;
+    transition: background 0.15s;
+}
+
+.client-item.active-source {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.client-item-role {
+    font-weight: 600;
+    text-transform: capitalize;
+    min-width: 70px;
+}
+
+.client-item-label {
+    flex: 1;
+    color: #8b8fa3;
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-you-tag {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #4f46e5;
+    background: #ede9fe;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.client-source-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #059669;
+}
+
+.client-source-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #059669;
+}
+
+.client-select-btn {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.client-select-btn:hover {
+    background: #4f46e5;
+    color: #fff;
+    border-color: #4f46e5;
+}
+
+.client-list-empty {
+    font-size: 0.8rem;
+    color: #b0b4c3;
+    padding: 8px 0;
+}
+
 /* --- Responsive: narrow screens --- */
 @media (max-width: 1200px) {
     .message-log {
@@ -573,8 +748,22 @@ body {
 }
 
 @media (max-width: 850px) {
+    body {
+        height: auto;
+        overflow: auto;
+        overflow-x: hidden;
+    }
+
     .dashboard {
         flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .video-container {
+        flex: none;
+        aspect-ratio: 16 / 9;
+        max-height: 60vh;
     }
 
     .message-log {

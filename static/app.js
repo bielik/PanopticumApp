@@ -8,6 +8,14 @@
     var MODE = window.PAGE_MODE || "controller"; // "controller" or "exhibition"
     var API = "/room/" + ROOM + "/api";
 
+    // --- Client identity ---
+    var CLIENT_ID = sessionStorage.getItem("panopticum_client_id");
+    if (!CLIENT_ID) {
+        CLIENT_ID = crypto.randomUUID();
+        sessionStorage.setItem("panopticum_client_id", CLIENT_ID);
+    }
+    var CLIENT_LABEL = MODE.charAt(0).toUpperCase() + MODE.slice(1) + " (" + navigator.platform + ")";
+
     // --- Elements ---
     var timestampEl = document.getElementById("timestamp");
     var recDot = document.getElementById("rec-dot");
@@ -29,7 +37,7 @@
     var scanlines = document.querySelector(".scanlines");
     var vignette = document.querySelector(".vignette");
 
-    // Controller-specific elements
+    // Camera elements (both controller and exhibition now)
     var localVideo = document.getElementById("local-video");
     var captureCanvas = document.getElementById("capture-canvas");
 
@@ -38,6 +46,12 @@
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
 
+    // Source controls (controller only)
+    var sourceStatusEl = document.getElementById("source-status");
+    var cameraSelectWrap = document.getElementById("camera-select-wrap");
+    var cameraSelect = document.getElementById("camera-select");
+    var clientListEl = document.getElementById("client-list");
+
     // --- State ---
     var isActive = false;
     var currentEffect = "natural";
@@ -45,6 +59,8 @@
     var isSynced = true;
     var frameUploadInterval = null;
     var cameraStream = null;
+    var isActiveSource = false;
+    var heartbeatTimer = null;
 
     // --- CSS filter map for effects ---
     var EFFECT_FILTERS = {
@@ -86,23 +102,93 @@
     var motivationalInterval = null;
 
     // =========================================================================
-    // Camera (controller mode only)
+    // Client registration & heartbeat
     // =========================================================================
-    function startCamera() {
-        if (MODE !== "controller" || !localVideo) return;
-
-        navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
+    function registerClient() {
+        fetch(API + "/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client_id: CLIENT_ID, role: MODE, label: CLIENT_LABEL }),
         })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.is_source) {
+                handleSourceChange(true);
+            }
+            if (data.clients) {
+                renderClientList(data.clients);
+            }
+        })
+        .catch(function (err) {
+            console.warn("Registration error:", err);
+        });
+    }
+
+    function startHeartbeat() {
+        if (heartbeatTimer) return;
+        heartbeatTimer = setInterval(function () {
+            fetch(API + "/heartbeat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ client_id: CLIENT_ID }),
+            }).catch(function () {});
+        }, 10000);
+    }
+
+    function setupUnregister() {
+        window.addEventListener("beforeunload", function () {
+            var data = JSON.stringify({ client_id: CLIENT_ID });
+            navigator.sendBeacon(API + "/unregister", new Blob([data], { type: "application/json" }));
+        });
+    }
+
+    // =========================================================================
+    // Camera (works on both controller and exhibition)
+    // =========================================================================
+    function startCamera(deviceId) {
+        var constraints;
+        if (deviceId) {
+            constraints = {
+                video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            };
+        } else {
+            constraints = {
+                video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            };
+        }
+
+        // Stop existing stream first
+        stopCamera();
+
+        navigator.mediaDevices.getUserMedia(constraints)
         .then(function (stream) {
             cameraStream = stream;
-            localVideo.srcObject = stream;
+            if (localVideo) {
+                localVideo.srcObject = stream;
+                localVideo.style.display = "";
+            }
+            // Hide MJPEG stream when we're the source on exhibition
+            if (MODE === "exhibition" && exhibitStream) {
+                exhibitStream.style.display = "none";
+            }
             console.log("Camera started");
+            populateCameraSelector();
         })
         .catch(function (err) {
             console.error("Camera error:", err);
         });
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(function (t) { t.stop(); });
+            cameraStream = null;
+        }
+        if (localVideo) {
+            localVideo.srcObject = null;
+        }
     }
 
     function startFrameUpload() {
@@ -118,6 +204,7 @@
     }
 
     function uploadFrame() {
+        if (!isActiveSource) return;
         if (!localVideo || !captureCanvas || !cameraStream) return;
         if (localVideo.videoWidth === 0) return; // not ready yet
 
@@ -131,7 +218,7 @@
         fetch(API + "/frame", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ frame: dataUrl }),
+            body: JSON.stringify({ frame: dataUrl, client_id: CLIENT_ID }),
         }).catch(function (err) {
             console.warn("Frame upload error:", err);
         });
@@ -142,6 +229,143 @@
         var filter = EFFECT_FILTERS[effect] || "none";
         if (localVideo) localVideo.style.filter = filter;
         if (exhibitStream) exhibitStream.style.filter = filter;
+    }
+
+    // =========================================================================
+    // Source change handling
+    // =========================================================================
+    function handleSourceChange(amISource) {
+        var wasSource = isActiveSource;
+        isActiveSource = amISource;
+
+        updateSourceUI();
+
+        if (amISource && !wasSource) {
+            // I became the source
+            startCamera();
+            if (isActive) startFrameUpload();
+        } else if (!amISource && wasSource) {
+            // I lost source status
+            stopFrameUpload();
+            // On controller, keep camera for preview; on exhibition, switch back to MJPEG
+            if (MODE === "exhibition") {
+                stopCamera();
+                if (localVideo) localVideo.style.display = "none";
+                if (exhibitStream) {
+                    exhibitStream.style.display = "";
+                    exhibitStream.src = "/room/" + ROOM + "/stream";
+                }
+            }
+        }
+    }
+
+    function updateSourceUI() {
+        if (sourceStatusEl) {
+            if (isActiveSource) {
+                sourceStatusEl.textContent = "This device is the video source";
+                sourceStatusEl.classList.add("is-source");
+            } else {
+                sourceStatusEl.textContent = "Another device is the video source";
+                sourceStatusEl.classList.remove("is-source");
+            }
+        }
+        if (cameraSelectWrap) {
+            cameraSelectWrap.style.display = isActiveSource ? "" : "none";
+        }
+    }
+
+    // =========================================================================
+    // Camera device picker
+    // =========================================================================
+    function populateCameraSelector() {
+        if (!cameraSelect) return;
+        navigator.mediaDevices.enumerateDevices()
+        .then(function (devices) {
+            var videoDevices = devices.filter(function (d) { return d.kind === "videoinput"; });
+            if (videoDevices.length <= 1) {
+                // Only one camera, hide the picker
+                if (cameraSelectWrap) cameraSelectWrap.style.display = "none";
+                return;
+            }
+            if (!isActiveSource) return;
+
+            // Get current track's device ID
+            var currentDeviceId = "";
+            if (cameraStream) {
+                var tracks = cameraStream.getVideoTracks();
+                if (tracks.length > 0 && tracks[0].getSettings) {
+                    currentDeviceId = tracks[0].getSettings().deviceId || "";
+                }
+            }
+
+            cameraSelect.innerHTML = "";
+            videoDevices.forEach(function (dev, i) {
+                var opt = document.createElement("option");
+                opt.value = dev.deviceId;
+                opt.textContent = dev.label || ("Camera " + (i + 1));
+                if (dev.deviceId === currentDeviceId) opt.selected = true;
+                cameraSelect.appendChild(opt);
+            });
+
+            if (cameraSelectWrap) cameraSelectWrap.style.display = "";
+        })
+        .catch(function () {});
+    }
+
+    if (cameraSelect) {
+        cameraSelect.addEventListener("change", function () {
+            if (cameraSelect.value) {
+                startCamera(cameraSelect.value);
+            }
+        });
+    }
+
+    // =========================================================================
+    // Client list rendering
+    // =========================================================================
+    function renderClientList(clients) {
+        if (!clientListEl) return;
+
+        if (!clients || clients.length === 0) {
+            clientListEl.innerHTML = '<div class="client-list-empty">No connected devices</div>';
+            return;
+        }
+
+        var html = "";
+        for (var i = 0; i < clients.length; i++) {
+            var c = clients[i];
+            var isMe = c.id === CLIENT_ID;
+            var cls = "client-item" + (c.is_source ? " active-source" : "");
+
+            html += '<div class="' + cls + '">';
+            html += '<span class="client-item-role">' + escapeHtml(c.role) + '</span>';
+            html += '<span class="client-item-label">' + escapeHtml(c.label || c.id.slice(0, 8)) + '</span>';
+            if (isMe) {
+                html += '<span class="client-you-tag">You</span>';
+            }
+            if (c.is_source) {
+                html += '<span class="client-source-badge">Source</span>';
+            } else {
+                html += '<button class="client-select-btn" data-client-id="' + escapeHtml(c.id) + '">Set Source</button>';
+            }
+            html += '</div>';
+        }
+        clientListEl.innerHTML = html;
+
+        // Attach click handlers to "Set Source" buttons
+        var btns = clientListEl.querySelectorAll(".client-select-btn");
+        btns.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var cid = btn.getAttribute("data-client-id");
+                fetch(API + "/set-source", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ client_id: cid }),
+                }).catch(function (err) {
+                    console.warn("Set source error:", err);
+                });
+            });
+        });
     }
 
     // =========================================================================
@@ -219,8 +443,8 @@
                 body: JSON.stringify({ active: newActive }),
             });
 
-            // Start/stop frame upload on controller
-            if (MODE === "controller") {
+            // Start/stop frame upload if we're the source
+            if (isActiveSource) {
                 if (newActive) {
                     startFrameUpload();
                 } else {
@@ -436,8 +660,8 @@
         var data = JSON.parse(e.data);
         updateStartStopButton(data.active);
 
-        // Auto-start/stop frame upload on controller
-        if (MODE === "controller") {
+        // Auto-start/stop frame upload if we're the source
+        if (isActiveSource) {
             if (data.active) {
                 startFrameUpload();
             } else {
@@ -464,6 +688,15 @@
         var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";
         highlightTonePill(nearest);
         currentTone = nearest;
+    });
+
+    evtSource.addEventListener("clients", function (e) {
+        var data = JSON.parse(e.data);
+        var amISource = data.active_source === CLIENT_ID;
+        if (amISource !== isActiveSource) {
+            handleSourceChange(amISource);
+        }
+        renderClientList(data.clients || []);
     });
 
     // Audio events (exhibition mode)
@@ -513,8 +746,8 @@
 
             if (data.description) addToMessageLog(data.description, data.tone);
 
-            // If already active, start frame upload
-            if (data.active && MODE === "controller") {
+            // If already active and we're the source, start frame upload
+            if (data.active && isActiveSource) {
                 startFrameUpload();
             }
         })
@@ -542,7 +775,13 @@
     // =========================================================================
     // Initialize
     // =========================================================================
+    registerClient();
+    startHeartbeat();
+    setupUnregister();
+
     if (MODE === "controller") {
+        // Camera will start when source assignment is confirmed via SSE
+        // Start it now for preview in case we're the first controller
         startCamera();
     } else if (MODE === "exhibition") {
         setupExhibition();
