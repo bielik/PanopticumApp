@@ -105,6 +105,7 @@ Multiple browsers can connect to the same room. Only one client at a time is the
 - **Client registration:** Each browser generates a UUID (`crypto.randomUUID()`) stored in `sessionStorage` and registers with the server on page load.
 - **Heartbeat:** Every 10 seconds, clients send a keep-alive. Stale clients (no heartbeat for 15s) are automatically removed.
 - **Source designation:** The first controller to connect becomes the source automatically. Any connected device (controller or exhibition) can be manually set as the source via the "Connected Devices" panel.
+- **Non-source controllers:** Controllers that are not the active source display the MJPEG stream from the source device, so all screens show the same feed. Camera permission is only requested when a device becomes the source.
 - **Frame rejection:** The server returns 403 for frame uploads from non-source clients, preventing visual chaos from multiple uploaders.
 - **Exhibition as source:** The exhibition device can run its own camera — when designated as source, it hides the MJPEG stream, activates `getUserMedia`, and uploads frames.
 - **Camera picker:** The active source device shows a dropdown to switch between available cameras.
@@ -150,10 +151,10 @@ CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860"]
 
 1. **Admin** opens the Space URL → enters admin password → clicks **Create**
 2. A room code is generated (e.g. `PANOPT-7X3K`) with links to controller and exhibition
-3. **Admin** opens the controller page → browser requests camera permission
+3. **Admin** opens the controller page → automatically becomes the video source → browser requests camera permission
 4. **Admin** clicks **START** → camera feed uploads to server, Gemini analysis begins
 5. **Exhibition device** joins via code or direct link → shows fullscreen MJPEG stream + audio narration
-6. **Additional controllers** can join — only the designated source uploads frames
+6. **Additional controllers** can join — they see the MJPEG stream from the source device (no camera prompt); only the designated source uploads frames
 7. Source can be switched to any connected device via the "Connected Devices" panel
 8. Room expires after 30 minutes of inactivity
 
