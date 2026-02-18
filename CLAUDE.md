@@ -65,6 +65,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 - When nothing is playing: plays immediately
 - Lyrics audio (`playRoboticAudio`) is best-effort — skipped entirely if narration is playing or pending
 - Activity log entries track `played` boolean; skipped entries get `.skipped` CSS class (dimmed + skip icon)
+- **Tone switch**: current audio finishes naturally, pending old-tone audio is dropped. Log entries retain their original tone label via `description_tone` stored at generation time.
 
 ### Backend
 - `server.py` uses FastAPI with Jinja2 templates, SSE via raw `StreamingResponse`
@@ -87,7 +88,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 | Event | Payload | Emitted when |
 |-------|---------|-------------|
 | `active` | `{active: bool}` | Pipeline started/stopped |
-| `description` | `{text, timestamp, tone}` | New AI observation (not NO_CHANGE) |
+| `description` | `{text, timestamp, tone, type}` | New AI observation (not NO_CHANGE). `tone` is the value at generation time (not current). `type`: commentary/action_request/action_completed/action_timeout |
 | `effect` | `{effect: str}` | Effect changed |
 | `tone` | `{value: float}` | Tone changed |
 | `lyrics` | `{text: str}` | Fitter Happier line (every 4th cycle, judgmental mode) |
@@ -101,7 +102,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 - First call: introduction mode (8-15 word scene description)
 - Subsequent calls: change detection (returns `NO_CHANGE` or 3-8 word update)
 - Stale timeout: forces description if silent for 10+ seconds
-- History: last 10 observations stored for context
+- Long response guard: if response exceeds 20 words, discards it and retries with blank context (no prior comment)
 - Tone preamble prepended to prompt based on slider value
 
 ### Multi-Client System
@@ -124,7 +125,7 @@ AI issues physical directives and verifies compliance via the camera.
               each 3s cycle: Gemini checks if action was performed
 ```
 
-**Room fields:** `action_setting` ("manual"/"automatic"), `action_phase` ("commenting"/"action_requesting"/"action_verifying"), `action_requested`, `action_request_time`, `action_last_comment_time`, `_action_phase_version`
+**Room fields:** `action_setting` ("manual"/"automatic"), `action_phase` ("commenting"/"action_requesting"/"action_verifying"), `action_requested`, `action_request_time`, `action_last_comment_time`, `_action_phase_version`, `description_type` (commentary/action_request/action_completed/action_timeout), `description_tone` (tone_value at generation time)
 
 **GeminiVision methods:**
 - `generate_action_request(jpeg, tone_preamble)` → 3-10 word command contrasting current posture
