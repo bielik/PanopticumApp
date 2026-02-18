@@ -62,6 +62,7 @@ class Room:
     latest_description: str = ""
     description_timestamp: float = 0.0
     description_type: str = "commentary"  # "commentary" | "action_request" | "action_completed" | "action_timeout"
+    description_tone: float = 0.5         # tone_value at the time this description was generated
     cycle_count: int = 0
     lyrics_index: int = 0
     lyrics_line: str = ""

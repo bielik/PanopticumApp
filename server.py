@@ -542,7 +542,7 @@ async def _sse_generator(room: Room):
             last_description = desc
             last_desc_time = desc_time
             events.append(("description", json.dumps({
-                "text": desc, "timestamp": desc_time, "tone": tone,
+                "text": desc, "timestamp": desc_time, "tone": room.description_tone,
                 "type": room.description_type,
             })))
 
@@ -686,6 +686,7 @@ async def _analysis_loop(room: Room):
 
                     if narration is not None:
                         room.description_type = "commentary"
+                        room.description_tone = room.tone_value
                         room.latest_description = narration
                         room.description_timestamp = time.time()
                         room.cycle_count += 1
@@ -736,6 +737,7 @@ async def _analysis_loop(room: Room):
 
                     # Push through normal description/audio pipeline
                     room.description_type = "action_request"
+                    room.description_tone = room.tone_value
                     room.latest_description = action_text
                     room.description_timestamp = time.time()
 
@@ -782,6 +784,7 @@ async def _analysis_loop(room: Room):
                         log.info(f"[{code}] Gemini generate_action_response: {gemini_time:.1f}s -> '{response_text}'")
 
                         room.description_type = "action_completed" if completed else "action_timeout"
+                        room.description_tone = room.tone_value
                         room.latest_description = response_text
                         room.description_timestamp = time.time()
 

@@ -833,18 +833,9 @@
         var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";
         highlightTonePill(nearest);
         currentTone = nearest;
-        // Flush old-tone audio so it doesn't play over new visual style
+        // Drop any pending old-tone audio (let current playback finish naturally)
         if (MODE === "worker") {
             pendingAudio = null;
-            if (isPlayingAudio && audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                isPlayingAudio = false;
-            }
-            if (audioRoboticPlayer) {
-                audioRoboticPlayer.pause();
-                audioRoboticPlayer.currentTime = 0;
-            }
         }
     });
 
