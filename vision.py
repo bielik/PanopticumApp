@@ -159,9 +159,27 @@ class GeminiVision:
             log.debug(f"Gemini: NO_CHANGE (silent for {seconds_since_speech:.0f}s)")
             return None
 
-        # Truncate to first sentence to prevent snowballing context
-        first_sentence = result.split(".")[0] + "." if "." in result else result
-        self.last_spoken = first_sentence[:100]
+        # If response is too long, discard it and retry with blank context
+        word_count = len(result.split())
+        if word_count > 20:
+            log.warning(f"Gemini response too long ({word_count} words), retrying with blank context")
+            self.last_spoken = ""
+            retry_prompt = self.narration_prompt.format(
+                last_spoken="(nothing yet)",
+                mode="Describe what you see in one brief sentence, maximum 10 words.",
+            )
+            if tone_preamble:
+                retry_prompt = tone_preamble + "\n" + retry_prompt
+            response = self._call_gemini([
+                types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+                types.Part.from_text(text=retry_prompt),
+            ])
+            result = response.text.strip()
+            if self._is_no_change(result):
+                return None
+            log.info(f"Gemini retry: {result[:80]}")
+
+        self.last_spoken = result
         self.last_spoken_time = time.time()
         if needs_introduction:
             self.introduced = True

@@ -245,6 +245,15 @@ To shut down, press **Ctrl+C** in the terminal.
 
 **Sync Toggle** — Links effect and tone: Insta ↔ Supportive, Natural ↔ Neutral, CCTV ↔ Judgmental.
 
+**Action Mode** — Interactive mode where the AI issues physical directives and verifies compliance:
+- **Manual** — Click "Request Action" to trigger an action request on demand
+- **Automatic** — AI auto-triggers an action request every 60 seconds of commentary
+- The AI generates a camera-verifiable physical action (raise hand, wave, look at camera, etc.) based on the current frame, speaks it via TTS, then polls the camera every 3 seconds to verify compliance
+- If the action is completed, the AI confirms with a tone-appropriate response
+- If 30 seconds elapse without compliance, the AI gives a neutral acknowledgement and returns to commentary
+- Phase badge shows current state: **Commenting** (gray), **Requesting** (amber), **Verifying** (amber)
+- The trigger button is disabled while an action is in progress
+
 **Worker Link** — Direct link to open the worker view for this room.
 
 **Source Controls** (HuggingFace Spaces only):
@@ -339,8 +348,9 @@ All room-scoped endpoints are prefixed with `/room/{code}/api/`.
 4. **Stale refresh** — If silent for 10+ seconds, a scene description is forced (configurable via `stale_timeout`).
 5. **TTS** — New descriptions are spoken via edge-tts. In local mode, through speakers. In HF Spaces, MP3 is streamed to the worker browser. The worker page uses a "latest wins" strategy — if descriptions arrive faster than they can be spoken, only the most recent one plays next (skipped entries are marked in the activity log).
 6. **Fitter Happier** — Every 4th cycle in judgmental mode: robotic female voice reads lyrics. Lyrics are best-effort and only play when no narration is active or pending.
-7. **Fallback** (local only) — If Gemini hits rate limits or goes down, the app switches to the local Ollama pipeline.
-8. **Stop** — Operator clicks STOP PANOPTICUM. Camera releases, API calls cease, TTS goes silent.
+7. **Action Mode** — Manually or automatically (every 60s), the AI switches from commentary to action: it generates a physical directive ("raise your right hand"), speaks it via TTS, then polls the camera every 3s to verify compliance. On success or 30s timeout, it responds and resumes commentary.
+8. **Fallback** (local only) — If Gemini hits rate limits or goes down, the app switches to the local Ollama pipeline.
+9. **Stop** — Operator clicks STOP PANOPTICUM. Camera releases, API calls cease, TTS goes silent.
 
 ---
 
