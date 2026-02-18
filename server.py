@@ -248,6 +248,9 @@ class SetSourceRequest(BaseModel):
 class UnregisterRequest(BaseModel):
     client_id: str
 
+class ActionSettingRequest(BaseModel):
+    setting: str  # "automatic" or "manual"
+
 
 @app.get("/room/{code}/api/status")
 async def room_status(code: str):
@@ -261,6 +264,9 @@ async def room_status(code: str):
         "tone": room.tone_value,
         "description": room.latest_description,
         "description_timestamp": room.description_timestamp,
+        "action_setting": room.action_setting,
+        "action_phase": room.action_phase,
+        "action_requested": room.action_requested,
     }
 
 
@@ -280,6 +286,13 @@ async def room_set_active(code: str, req: ActiveRequest):
     room.active = req.active
     room.touch()
     log.info(f"[{code}] Pipeline {'STARTED' if req.active else 'STOPPED'}")
+
+    # Reset action state on start
+    if req.active:
+        room.action_last_comment_time = time.time()
+        room.action_phase = "commenting"
+        room.action_requested = ""
+        room._action_phase_version += 1
 
     # Start or stop analysis loop
     if req.active and (room._analysis_task is None or room._analysis_task.done()):
@@ -332,6 +345,41 @@ async def room_set_tone(code: str, req: ToneRequest):
     room.touch()
     log.info(f"[{code}] Tone: {value:.2f}")
     return {"value": value}
+
+
+# ---------------------------------------------------------------------------
+# Action mode API
+# ---------------------------------------------------------------------------
+@app.post("/room/{code}/api/action-setting")
+async def room_set_action_setting(code: str, req: ActionSettingRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    if req.setting not in ("automatic", "manual"):
+        return JSONResponse(status_code=400, content={"error": "Invalid setting"})
+    room.action_setting = req.setting
+    if req.setting == "automatic":
+        room.action_last_comment_time = time.time()
+    room._action_phase_version += 1
+    room.touch()
+    log.info(f"[{code}] Action setting: {req.setting}")
+    return {"setting": req.setting}
+
+
+@app.post("/room/{code}/api/trigger-action")
+async def room_trigger_action(code: str):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    if room.action_phase != "commenting":
+        return JSONResponse(status_code=400, content={"error": "Action already in progress"})
+    if not room.active:
+        return JSONResponse(status_code=400, content={"error": "Pipeline not active"})
+    room.action_phase = "action_requesting"
+    room._action_phase_version += 1
+    room.touch()
+    log.info(f"[{code}] Action triggered manually")
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------
@@ -470,6 +518,7 @@ async def _sse_generator(room: Room):
     last_lyrics = ""
     last_lyrics_time = 0.0
     last_clients_version = -1
+    last_action_phase_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -514,6 +563,15 @@ async def _sse_generator(room: Room):
             events.append(("clients", json.dumps({
                 "clients": get_client_list(room),
                 "active_source": room.active_source_client_id,
+            })))
+
+        action_phase_version = room._action_phase_version
+        if action_phase_version != last_action_phase_version:
+            last_action_phase_version = action_phase_version
+            events.append(("action_phase", json.dumps({
+                "setting": room.action_setting,
+                "phase": room.action_phase,
+                "action": room.action_requested,
             })))
 
         # Emit audio events for any new audio files (decoupled from description timing)
@@ -609,38 +667,115 @@ async def _analysis_loop(room: Room):
                 continue
 
             try:
-                # Run Gemini call in thread pool (it's synchronous)
-                narration = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    room.gemini.describe_and_narrate,
-                    jpeg_bytes,
-                    room.tone_preamble,
-                )
-                consecutive_failures = 0
+                phase = room.action_phase
 
-                if narration is not None:
-                    room.latest_description = narration
+                if phase == "commenting":
+                    # --- COMMENTING phase (existing behavior) ---
+                    narration = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        room.gemini.describe_and_narrate,
+                        jpeg_bytes,
+                        room.tone_preamble,
+                    )
+
+                    if narration is not None:
+                        room.latest_description = narration
+                        room.description_timestamp = time.time()
+                        room.cycle_count += 1
+
+                        mp3_bytes = await generate_speech(narration, room.tone_value)
+                        if mp3_bytes:
+                            audio_ts = room.description_timestamp
+                            room.audio_files[audio_ts] = mp3_bytes
+
+                        # Every 4th cycle in judgmental mode: robotic lyrics
+                        if room.cycle_count % 4 == 0 and room.tone_value >= 0.75:
+                            line = FITTER_HAPPIER_LYRICS[room.lyrics_index % len(FITTER_HAPPIER_LYRICS)]
+                            room.lyrics_index += 1
+                            room.lyrics_line = line
+                            room.lyrics_timestamp = time.time()
+
+                            spoken = line.replace("\n", " ")
+                            robotic_bytes = await generate_robotic_speech(spoken)
+                            if robotic_bytes:
+                                robotic_ts = room.lyrics_timestamp
+                                room.audio_files[robotic_ts] = robotic_bytes
+
+                    # Check auto-trigger for action mode
+                    if room.action_setting == "automatic" and room.action_last_comment_time > 0:
+                        elapsed = time.time() - room.action_last_comment_time
+                        if elapsed >= 60:
+                            room.action_phase = "action_requesting"
+                            room._action_phase_version += 1
+                            log.info(f"[{code}] Action auto-triggered after {elapsed:.0f}s")
+
+                elif phase == "action_requesting":
+                    # --- ACTION_REQUESTING phase ---
+                    action_text = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        room.gemini.generate_action_request,
+                        jpeg_bytes,
+                        room.tone_preamble,
+                    )
+                    room.action_requested = action_text
+                    room.action_request_time = time.time()
+
+                    # Push through normal description/audio pipeline
+                    room.latest_description = action_text
                     room.description_timestamp = time.time()
-                    room.cycle_count += 1
 
-                    # Generate TTS audio
-                    mp3_bytes = await generate_speech(narration, room.tone_value)
+                    mp3_bytes = await generate_speech(action_text, room.tone_value)
                     if mp3_bytes:
                         audio_ts = room.description_timestamp
                         room.audio_files[audio_ts] = mp3_bytes
 
-                    # Every 4th cycle in judgmental mode: robotic lyrics
-                    if room.cycle_count % 4 == 0 and room.tone_value >= 0.75:
-                        line = FITTER_HAPPIER_LYRICS[room.lyrics_index % len(FITTER_HAPPIER_LYRICS)]
-                        room.lyrics_index += 1
-                        room.lyrics_line = line
-                        room.lyrics_timestamp = time.time()
+                    # Transition to verifying
+                    room.action_phase = "action_verifying"
+                    room._action_phase_version += 1
+                    log.info(f"[{code}] Action requested: '{action_text}' -> verifying")
 
-                        spoken = line.replace("\n", " ")
-                        robotic_bytes = await generate_robotic_speech(spoken)
-                        if robotic_bytes:
-                            robotic_ts = room.lyrics_timestamp
-                            room.audio_files[robotic_ts] = robotic_bytes
+                elif phase == "action_verifying":
+                    # --- ACTION_VERIFYING phase ---
+                    completed = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        room.gemini.verify_action,
+                        jpeg_bytes,
+                        room.action_requested,
+                    )
+
+                    elapsed = time.time() - room.action_request_time
+                    timed_out = elapsed >= 30
+
+                    if completed or timed_out:
+                        response_text = await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            room.gemini.generate_action_response,
+                            jpeg_bytes,
+                            room.action_requested,
+                            completed,
+                            room.tone_preamble,
+                        )
+
+                        room.latest_description = response_text
+                        room.description_timestamp = time.time()
+
+                        mp3_bytes = await generate_speech(response_text, room.tone_value)
+                        if mp3_bytes:
+                            audio_ts = room.description_timestamp
+                            room.audio_files[audio_ts] = mp3_bytes
+
+                        reason = "completed" if completed else f"timed out ({elapsed:.0f}s)"
+                        log.info(f"[{code}] Action {reason}: '{room.action_requested}' -> commenting")
+
+                        # Transition back to commenting
+                        room.action_phase = "commenting"
+                        room.action_requested = ""
+                        room.action_last_comment_time = time.time()
+                        room._action_phase_version += 1
+                    else:
+                        log.debug(f"[{code}] Action not yet completed ({elapsed:.0f}s elapsed)")
+
+                consecutive_failures = 0
 
             except asyncio.CancelledError:
                 raise

@@ -164,3 +164,88 @@ class GeminiVision:
         if needs_introduction:
             self.introduced = True
         return result
+
+    def generate_action_request(self, jpeg_bytes: bytes, tone_preamble: str = "") -> str:
+        """Generate a camera-verifiable physical action request based on current frame."""
+        from google.genai import types
+
+        prompt = (
+            "You are an automated surveillance system issuing a physical directive to the person on camera.\n"
+            "Look at what they are currently doing and pick a simple, camera-verifiable physical action "
+            "that CONTRASTS with their current posture or activity.\n\n"
+            "Action pool: stand up, sit down, raise your right hand, raise your left hand, wave at the camera, "
+            "give a thumbs up, look directly at the camera, stretch your arms above your head, "
+            "lean back in your chair, put both hands on the desk, cross your arms, touch your head.\n\n"
+            "Rules:\n"
+            "- Pick ONE action from the pool (or similar)\n"
+            "- The action must be visually verifiable from a webcam\n"
+            "- Phrase it as a direct command, 3-10 words\n"
+            "- Do NOT add explanation or commentary — just the command\n"
+        )
+
+        if tone_preamble:
+            prompt = tone_preamble + "\n" + prompt
+
+        response = self._call_gemini([
+            types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+            types.Part.from_text(text=prompt),
+        ])
+        result = response.text.strip()
+        log.info(f"Gemini action request: {result}")
+        return result
+
+    def verify_action(self, jpeg_bytes: bytes, action_text: str) -> bool:
+        """Check if the requested action has been performed. Returns True if completed."""
+        from google.genai import types
+
+        prompt = (
+            "You are verifying whether a person has performed a specific action.\n\n"
+            f"Requested action: \"{action_text}\"\n\n"
+            "Look at the image carefully. Is the person currently performing or has performed this action?\n\n"
+            "Respond with EXACTLY one word:\n"
+            "- COMPLETED — if the action is being performed or has been performed\n"
+            "- NOT_YET — if the action has not been performed\n"
+        )
+
+        response = self._call_gemini([
+            types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+            types.Part.from_text(text=prompt),
+        ])
+        result = response.text.strip()
+        completed = "COMPLETED" in result.upper()
+        log.info(f"Gemini verify action '{action_text}': {result} -> {'completed' if completed else 'not yet'}")
+        return completed
+
+    def generate_action_response(self, jpeg_bytes: bytes, action_text: str, completed: bool, tone_preamble: str = "") -> str:
+        """Generate a spoken response after action resolution."""
+        from google.genai import types
+
+        if completed:
+            prompt = (
+                "You are an automated surveillance system. The person on camera has just completed "
+                f"the following action you requested: \"{action_text}\"\n\n"
+                "Generate a brief spoken confirmation, 5-12 words.\n"
+                "Match the tone specified below.\n"
+                "Do NOT add explanation — just the spoken line.\n"
+            )
+            if tone_preamble:
+                prompt = tone_preamble + "\n" + prompt
+        else:
+            # Non-compliance is always neutral regardless of tone
+            prompt = (
+                "You are an automated surveillance system. The person on camera did NOT complete "
+                f"the following action you requested: \"{action_text}\"\n\n"
+                "Generate a brief, neutral, factual acknowledgement of non-compliance, 5-12 words.\n"
+                "Be matter-of-fact, not harsh, not supportive — just neutral.\n"
+                "Do NOT add explanation — just the spoken line.\n"
+            )
+
+        response = self._call_gemini([
+            types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+            types.Part.from_text(text=prompt),
+        ])
+        result = response.text.strip()
+        self.last_spoken = result
+        self.last_spoken_time = time.time()
+        log.info(f"Gemini action response ({'completed' if completed else 'non-compliance'}): {result}")
+        return result

@@ -66,6 +66,14 @@ class Room:
     lyrics_line: str = ""
     lyrics_timestamp: float = 0.0
 
+    # Action mode state
+    action_setting: str = "manual"          # "automatic" or "manual"
+    action_phase: str = "commenting"        # "commenting" | "action_requesting" | "action_verifying"
+    action_requested: str = ""              # The action text (e.g. "raise your right hand")
+    action_request_time: float = 0.0        # When request was issued (for 30s timeout)
+    action_last_comment_time: float = 0.0   # When commenting phase began (for 60s auto-trigger)
+    _action_phase_version: int = 0          # Bumped on change, polled by SSE generator
+
     # Audio files: timestamp -> mp3 bytes
     audio_files: dict = field(default_factory=dict)
 

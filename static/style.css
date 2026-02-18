@@ -556,6 +556,89 @@ body {
     font-size: 0.75em;
 }
 
+/* --- Action mode panel --- */
+.action-panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding-top: 4px;
+    border-top: 1px solid #f0f1f5;
+    margin-top: 4px;
+}
+
+.action-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.action-phase-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #f0f1f5;
+    color: #8b8fa3;
+    white-space: nowrap;
+}
+
+.action-phase-label.phase-requesting,
+.action-phase-label.phase-verifying {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.action-requested-text {
+    font-size: 0.8rem;
+    color: #374151;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-trigger-btn {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border: 2px solid #d97706;
+    border-radius: 8px;
+    background: transparent;
+    color: #d97706;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.action-trigger-btn:hover {
+    background: #d97706;
+    color: #fff;
+}
+
+.action-trigger-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #d1d5db;
+    color: #9ca3af;
+}
+
+.action-trigger-btn:disabled:hover {
+    background: transparent;
+    color: #9ca3af;
+}
+
+body.worker-mode .action-panel {
+    display: none;
+}
+
 /* --- Source controls --- */
 .controls-source {
     display: flex;

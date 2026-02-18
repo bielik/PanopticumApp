@@ -53,6 +53,12 @@
     var cameraSelect = document.getElementById("camera-select");
     var clientListEl = document.getElementById("client-list");
 
+    // Action mode elements
+    var actionSettingPills = document.querySelectorAll("#action-setting-pills .pill-btn");
+    var actionPhaseLabel = document.getElementById("action-phase-label");
+    var actionRequestedText = document.getElementById("action-requested-text");
+    var actionTriggerBtn = document.getElementById("action-trigger-btn");
+
     // --- State ---
     var isActive = false;
     var currentEffect = "natural";
@@ -62,6 +68,8 @@
     var cameraStream = null;
     var isActiveSource = false;
     var heartbeatTimer = null;
+    var currentActionSetting = "manual";
+    var currentActionPhase = "commenting";
 
     // --- CSS filter map for effects ---
     var EFFECT_FILTERS = {
@@ -722,6 +730,63 @@
     }
 
     // =========================================================================
+    // Action mode
+    // =========================================================================
+    function setActionSetting(setting) {
+        currentActionSetting = setting;
+        fetch(API + "/action-setting", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ setting: setting }),
+        }).catch(function (err) {
+            console.warn("Action setting error:", err);
+        });
+        highlightActionSettingPill(setting);
+    }
+
+    function highlightActionSettingPill(setting) {
+        actionSettingPills.forEach(function (btn) {
+            btn.classList.toggle("active", btn.getAttribute("data-action-setting") === setting);
+        });
+    }
+
+    function updateActionPhaseUI(phase, action) {
+        currentActionPhase = phase;
+        if (actionPhaseLabel) {
+            var labels = { "commenting": "Commenting", "action_requesting": "Requesting", "action_verifying": "Verifying" };
+            actionPhaseLabel.textContent = labels[phase] || phase;
+            actionPhaseLabel.className = "action-phase-label";
+            if (phase === "action_requesting") actionPhaseLabel.classList.add("phase-requesting");
+            if (phase === "action_verifying") actionPhaseLabel.classList.add("phase-verifying");
+        }
+        if (actionRequestedText) {
+            actionRequestedText.textContent = action || "";
+        }
+        if (actionTriggerBtn) {
+            actionTriggerBtn.disabled = phase !== "commenting";
+        }
+    }
+
+    actionSettingPills.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            setActionSetting(btn.getAttribute("data-action-setting"));
+        });
+    });
+
+    if (actionTriggerBtn) {
+        actionTriggerBtn.addEventListener("click", function () {
+            if (currentActionPhase !== "commenting") return;
+            fetch(API + "/trigger-action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            }).catch(function (err) {
+                console.warn("Trigger action error:", err);
+            });
+        });
+    }
+
+    // =========================================================================
     // SSE listeners
     // =========================================================================
     var evtSource = new EventSource("/room/" + ROOM + "/events");
@@ -768,6 +833,13 @@
             handleSourceChange(amISource);
         }
         renderClientList(data.clients || []);
+    });
+
+    evtSource.addEventListener("action_phase", function (e) {
+        var data = JSON.parse(e.data);
+        highlightActionSettingPill(data.setting);
+        currentActionSetting = data.setting;
+        updateActionPhaseUI(data.phase, data.action);
     });
 
     // Audio events (both modes mark log entries; only worker plays audio)
@@ -822,6 +894,15 @@
             currentTone = nearest;
 
             if (data.description) addToMessageLog(data.description, data.tone);
+
+            // Action mode initial state
+            if (data.action_setting) {
+                currentActionSetting = data.action_setting;
+                highlightActionSettingPill(data.action_setting);
+            }
+            if (data.action_phase) {
+                updateActionPhaseUI(data.action_phase, data.action_requested || "");
+            }
 
             // If already active and we're the source, start frame upload
             if (data.active && isActiveSource) {

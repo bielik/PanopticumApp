@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/style.css?v=14">
 </head>
 <body>
     <div class="dashboard">
@@ -62,6 +62,22 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Action mode -->
+                <div class="action-panel" id="action-panel">
+                    <div class="control-group">
+                        <span class="control-label">Action Mode</span>
+                        <div class="pill-group" id="action-setting-pills">
+                            <button class="pill-btn active" data-action-setting="manual">Manual</button>
+                            <button class="pill-btn" data-action-setting="automatic">Automatic</button>
+                        </div>
+                    </div>
+                    <div class="action-status" id="action-status">
+                        <span class="action-phase-label" id="action-phase-label">Commenting</span>
+                        <span class="action-requested-text" id="action-requested-text"></span>
+                    </div>
+                    <button class="action-trigger-btn" id="action-trigger-btn">Request Action</button>
+                </div>
             </div>
 
             <!-- Source controls -->
@@ -102,6 +118,6 @@
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "controller";
     </script>
-    <script src="/static/app.js?v=14"></script>
+    <script src="/static/app.js?v=15"></script>
 </body>
 </html>
