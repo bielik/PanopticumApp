@@ -624,7 +624,7 @@ async def _analysis_loop(room: Room):
                     room.cycle_count += 1
 
                     # Generate TTS audio
-                    mp3_bytes = await generate_speech(narration)
+                    mp3_bytes = await generate_speech(narration, room.tone_value)
                     if mp3_bytes:
                         audio_ts = room.description_timestamp
                         room.audio_files[audio_ts] = mp3_bytes

@@ -12,11 +12,13 @@ import edge_tts
 log = logging.getLogger("panopticum.tts")
 
 
-# Default voice settings (match config.yaml edge_tts section)
-DEFAULT_VOICE = "en-US-GuyNeural"
-DEFAULT_RATE = "-15%"
+# Tone-specific voices (supportive → neutral → judgmental)
+TONE_VOICES = {
+    "supportive": {"voice": "en-AU-WilliamNeural", "rate": "-15%", "pitch": "-15Hz"},
+    "neutral":    {"voice": "en-GB-SoniaNeural",    "rate": "-15%", "pitch": "-15Hz"},
+    "judgmental": {"voice": "en-US-GuyNeural",       "rate": "-15%", "pitch": "-15Hz"},
+}
 DEFAULT_VOLUME = "+0%"
-DEFAULT_PITCH = "-15Hz"
 
 # Robotic voice for Fitter Happier lyrics
 ROBOTIC_VOICE = "en-US-JennyNeural"
@@ -25,15 +27,25 @@ ROBOTIC_VOLUME = "+0%"
 ROBOTIC_PITCH = "-15Hz"
 
 
-async def generate_speech(text: str) -> bytes:
+def _voice_for_tone(tone_value: float) -> dict:
+    """Pick voice settings based on tone slider value."""
+    if tone_value <= 0.25:
+        return TONE_VOICES["supportive"]
+    if tone_value <= 0.75:
+        return TONE_VOICES["neutral"]
+    return TONE_VOICES["judgmental"]
+
+
+async def generate_speech(text: str, tone_value: float = 0.5) -> bytes:
     """Generate MP3 bytes from text using edge-tts. Returns bytes or empty."""
     try:
+        v = _voice_for_tone(tone_value)
         communicate = edge_tts.Communicate(
             text,
-            DEFAULT_VOICE,
-            rate=DEFAULT_RATE,
+            v["voice"],
+            rate=v["rate"],
             volume=DEFAULT_VOLUME,
-            pitch=DEFAULT_PITCH,
+            pitch=v["pitch"],
         )
         chunks = []
         async for chunk in communicate.stream():
