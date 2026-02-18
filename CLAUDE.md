@@ -23,6 +23,7 @@ Browser (Controller)          server.py                   Browser (Worker)
                                └─ SSE /events ─────→ "description" {text, timestamp, tone}
                                                       "audio" {url: /audio/{timestamp}}
                                                       "audio_robotic" {url}
+                                                      "action_phase" {setting, phase, action}
 ```
 
 Timestamps (Unix floats from `time.time()`) are the correlation key between description events and audio URLs. The audio URL pattern is `/room/{code}/audio/{timestamp}`.
@@ -34,7 +35,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 | `server.py` | FastAPI web server, room-scoped routes, async analysis loop, SSE, MJPEG relay, audio serving |
 | `main.py` | Local standalone entry point — camera, analysis, TTS threads + web server |
 | `rooms.py` | Room + Client dataclasses, registration, heartbeat, cleanup |
-| `vision.py` | `GeminiVision` — Gemini API wrapper with unified describe_and_narrate + history |
+| `vision.py` | `GeminiVision` — Gemini API wrapper with unified describe_and_narrate + action mode methods |
 | `tts.py` | `generate_speech()` / `generate_robotic_speech()` — edge-tts async MP3 generation |
 | `tone.py` | Tone system (0.0 supportive → 0.5 neutral → 1.0 judgmental), builds prompt preambles |
 | `effects.py` | OpenCV video effects (CCTV grayscale, Insta sepia) — local mode only |
@@ -93,6 +94,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 | `audio` | `{url: str}` | Narration MP3 ready |
 | `audio_robotic` | `{url: str}` | Robotic lyrics MP3 ready |
 | `clients` | `{clients: [...], active_source: str}` | Client join/leave/source switch |
+| `action_phase` | `{setting, phase, action}` | Action mode state changed |
 
 ### Gemini Unified Mode
 `GeminiVision.describe_and_narrate()` handles everything in one API call:
@@ -108,6 +110,34 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 - Source can be switched via "Connected Devices" panel
 - Heartbeat every 10s, stale cleanup every 5s (15s timeout)
 - `_clients_version` counter triggers SSE `clients` events
+
+### Action Mode
+AI issues physical directives and verifies compliance via the camera.
+
+**State machine:**
+```
+  COMMENTING ──(auto: 60s elapsed, OR manual button)──→ ACTION_REQUESTING
+       ↑                                                       │
+       │                                     (Gemini generates action, TTS speaks it)
+       │                                                       ↓
+       └──(COMPLETED or 30s timeout)────────── ACTION_VERIFYING
+              each 3s cycle: Gemini checks if action was performed
+```
+
+**Room fields:** `action_setting` ("manual"/"automatic"), `action_phase` ("commenting"/"action_requesting"/"action_verifying"), `action_requested`, `action_request_time`, `action_last_comment_time`, `_action_phase_version`
+
+**GeminiVision methods:**
+- `generate_action_request(jpeg, tone_preamble)` → 3-10 word command contrasting current posture
+- `verify_action(jpeg, action_text)` → bool (substring check for "COMPLETED")
+- `generate_action_response(jpeg, action_text, completed, tone_preamble)` → 5-12 word spoken response; non-compliance is always neutral regardless of tone
+
+**API endpoints:**
+- `POST /room/{code}/api/action-setting` — body: `{setting: "automatic"|"manual"}`
+- `POST /room/{code}/api/trigger-action` — empty body, returns 400 if action in progress or pipeline inactive
+
+**Analysis loop phases:** The loop branches on `room.action_phase`. Commenting phase runs existing `describe_and_narrate`. Requesting phase generates action + TTS then transitions to verifying. Verifying phase polls `verify_action` each cycle; on completion or 30s timeout, generates response + TTS and transitions back to commenting.
+
+**Frontend:** Action panel in controls bar with Manual/Automatic pills, phase badge (gray=commenting, amber=requesting/verifying), action text display, and "Request Action" trigger button (disabled during action).
 
 ## Dev Setup
 
