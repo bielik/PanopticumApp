@@ -129,11 +129,13 @@ uvicorn server:app --port 7860  # HF Spaces mode
 
 ## Deployment (HuggingFace Spaces)
 
-**After every commit, always push to the `hf` remote so the user can test changes live:**
+**CRITICAL: After every commit, always deploy to HuggingFace by pushing to `hf main`:**
 
 ```bash
 git push hf feature/hf-spaces:main
 ```
+
+`git push` alone only pushes to the tracking branch `hf/feature/hf-spaces`, which does NOT trigger a deploy. HF Spaces only deploys from `main`. Always use the command above.
 
 Required secrets in HF Space settings:
 - `GEMINI_API_KEY`
