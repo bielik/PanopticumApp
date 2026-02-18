@@ -651,17 +651,10 @@ async def _analysis_loop(room: Room):
 
     consecutive_failures = 0
     max_failures = 5
-    skip_next_cycle = False  # Skip after NO_CHANGE to reduce API rate
 
     try:
         while room.active:
             cycle_start = time.time()
-
-            # Skip cycle after NO_CHANGE to stay under Gemini rate limits (~15 RPM)
-            if skip_next_cycle and room.action_phase == "commenting":
-                skip_next_cycle = False
-                await asyncio.sleep(interval)
-                continue
 
             # Wait for a frame
             if room.latest_frame_jpeg is None:
@@ -691,9 +684,7 @@ async def _analysis_loop(room: Room):
                     gemini_time = time.time() - t0
                     log.info(f"[{code}] Gemini describe_and_narrate: {gemini_time:.1f}s -> {'NO_CHANGE' if narration is None else repr(narration[:60])}")
 
-                    if narration is None:
-                        skip_next_cycle = True
-                    else:
+                    if narration is not None:
                         room.description_type = "commentary"
                         room.latest_description = narration
                         room.description_timestamp = time.time()
@@ -821,7 +812,7 @@ async def _analysis_loop(room: Room):
 
                 retry_delay = _extract_retry_delay(error_str)
                 if retry_delay and consecutive_failures < max_failures:
-                    log.warning(f"[{code}] Rate limited. Waiting {retry_delay:.0f}s ({consecutive_failures}/{max_failures})")
+                    log.warning(f"[{code}] Rate limited. Waiting {retry_delay:.0f}s ({consecutive_failures}/{max_failures}). Error: {error_str[:200]}")
                     await asyncio.sleep(retry_delay)
                     continue
 
@@ -833,9 +824,8 @@ async def _analysis_loop(room: Room):
                     await asyncio.sleep(30)
 
             # Sleep remaining interval — wake early if action phase changes
-            # Use longer interval during verification to reduce API pressure
             initial_phase = room.action_phase
-            effective_interval = 5 if initial_phase == "action_verifying" else interval
+            effective_interval = interval
             cycle_elapsed = time.time() - cycle_start
             remaining = effective_interval - cycle_elapsed
             log.info(f"[{code}] Cycle done: total={cycle_elapsed:.1f}s, sleeping={max(0, remaining):.1f}s")
@@ -857,14 +847,16 @@ async def _analysis_loop(room: Room):
 
 def _extract_retry_delay(error_str: str) -> float | None:
     """Extract retry delay in seconds from a Gemini 429 error message."""
+    # Try to extract explicit retry delay from error message
     match = re.search(r"retry[_ ]?[iI]n[:\s'\"]*(\d+\.?\d*)\s*s", error_str, re.IGNORECASE)
     if match:
         return min(float(match.group(1)), 60.0)
     match = re.search(r"retryDelay['\"]?\s*:\s*['\"]?(\d+)", error_str, re.IGNORECASE)
     if match:
         return min(float(match.group(1)), 60.0)
+    # No explicit delay found — use a short retry (paid tiers have high limits)
     if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-        return 30.0
+        return 3.0
     return None
 
 
