@@ -833,6 +833,19 @@
         var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";
         highlightTonePill(nearest);
         currentTone = nearest;
+        // Flush old-tone audio so it doesn't play over new visual style
+        if (MODE === "worker") {
+            pendingAudio = null;
+            if (isPlayingAudio && audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                isPlayingAudio = false;
+            }
+            if (audioRoboticPlayer) {
+                audioRoboticPlayer.pause();
+                audioRoboticPlayer.currentTime = 0;
+            }
+        }
     });
 
     evtSource.addEventListener("clients", function (e) {
