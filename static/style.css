@@ -551,6 +551,37 @@ body {
     opacity: 0.45;
 }
 
+/* --- Action tags in activity log --- */
+.action-tag {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+.action-request {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.action-completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.action-timeout {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.message-log-item.action-entry {
+    border-left: 3px solid #d97706;
+}
+
+.message-log-item.action-entry.latest {
+    border-left: 3px solid #d97706;
+    background: #fffbeb;
+}
+
 .message-log-item.skipped .message-log-time::after {
     content: " \23ED";
     font-size: 0.75em;

@@ -264,6 +264,7 @@ async def room_status(code: str):
         "tone": room.tone_value,
         "description": room.latest_description,
         "description_timestamp": room.description_timestamp,
+        "description_type": room.description_type,
         "action_setting": room.action_setting,
         "action_phase": room.action_phase,
         "action_requested": room.action_requested,
@@ -542,6 +543,7 @@ async def _sse_generator(room: Room):
             last_desc_time = desc_time
             events.append(("description", json.dumps({
                 "text": desc, "timestamp": desc_time, "tone": tone,
+                "type": room.description_type,
             })))
 
         if effect != last_effect:
@@ -668,22 +670,30 @@ async def _analysis_loop(room: Room):
 
             try:
                 phase = room.action_phase
+                log.info(f"[{code}] Cycle start: phase={phase}, elapsed_since_start={time.time() - cycle_start:.1f}s")
 
                 if phase == "commenting":
                     # --- COMMENTING phase (existing behavior) ---
+                    t0 = time.time()
                     narration = await asyncio.get_event_loop().run_in_executor(
                         None,
                         room.gemini.describe_and_narrate,
                         jpeg_bytes,
                         room.tone_preamble,
                     )
+                    gemini_time = time.time() - t0
+                    log.info(f"[{code}] Gemini describe_and_narrate: {gemini_time:.1f}s -> {'NO_CHANGE' if narration is None else repr(narration[:60])}")
 
                     if narration is not None:
+                        room.description_type = "commentary"
                         room.latest_description = narration
                         room.description_timestamp = time.time()
                         room.cycle_count += 1
 
+                        t0 = time.time()
                         mp3_bytes = await generate_speech(narration, room.tone_value)
+                        tts_time = time.time() - t0
+                        log.info(f"[{code}] TTS: {tts_time:.1f}s, {len(mp3_bytes) if mp3_bytes else 0} bytes")
                         if mp3_bytes:
                             audio_ts = room.description_timestamp
                             room.audio_files[audio_ts] = mp3_bytes
@@ -703,28 +713,36 @@ async def _analysis_loop(room: Room):
 
                     # Check auto-trigger for action mode
                     if room.action_setting == "automatic" and room.action_last_comment_time > 0:
-                        elapsed = time.time() - room.action_last_comment_time
-                        if elapsed >= 60:
+                        elapsed_since_comment = time.time() - room.action_last_comment_time
+                        if elapsed_since_comment >= 60:
                             room.action_phase = "action_requesting"
                             room._action_phase_version += 1
-                            log.info(f"[{code}] Action auto-triggered after {elapsed:.0f}s")
+                            log.info(f"[{code}] Action auto-triggered after {elapsed_since_comment:.0f}s")
 
                 elif phase == "action_requesting":
                     # --- ACTION_REQUESTING phase ---
+                    t0 = time.time()
                     action_text = await asyncio.get_event_loop().run_in_executor(
                         None,
                         room.gemini.generate_action_request,
                         jpeg_bytes,
                         room.tone_preamble,
                     )
+                    gemini_time = time.time() - t0
+                    log.info(f"[{code}] Gemini generate_action_request: {gemini_time:.1f}s -> '{action_text}'")
+
                     room.action_requested = action_text
                     room.action_request_time = time.time()
 
                     # Push through normal description/audio pipeline
+                    room.description_type = "action_request"
                     room.latest_description = action_text
                     room.description_timestamp = time.time()
 
+                    t0 = time.time()
                     mp3_bytes = await generate_speech(action_text, room.tone_value)
+                    tts_time = time.time() - t0
+                    log.info(f"[{code}] TTS (action request): {tts_time:.1f}s")
                     if mp3_bytes:
                         audio_ts = room.description_timestamp
                         room.audio_files[audio_ts] = mp3_bytes
@@ -736,17 +754,22 @@ async def _analysis_loop(room: Room):
 
                 elif phase == "action_verifying":
                     # --- ACTION_VERIFYING phase ---
+                    elapsed_since_request = time.time() - room.action_request_time
+
+                    t0 = time.time()
                     completed = await asyncio.get_event_loop().run_in_executor(
                         None,
                         room.gemini.verify_action,
                         jpeg_bytes,
                         room.action_requested,
                     )
+                    gemini_time = time.time() - t0
+                    log.info(f"[{code}] Gemini verify_action: {gemini_time:.1f}s -> {'COMPLETED' if completed else 'NOT_YET'} ({elapsed_since_request:.0f}s since request)")
 
-                    elapsed = time.time() - room.action_request_time
-                    timed_out = elapsed >= 30
+                    timed_out = elapsed_since_request >= 30
 
                     if completed or timed_out:
+                        t0 = time.time()
                         response_text = await asyncio.get_event_loop().run_in_executor(
                             None,
                             room.gemini.generate_action_response,
@@ -755,16 +778,22 @@ async def _analysis_loop(room: Room):
                             completed,
                             room.tone_preamble,
                         )
+                        gemini_time = time.time() - t0
+                        log.info(f"[{code}] Gemini generate_action_response: {gemini_time:.1f}s -> '{response_text}'")
 
+                        room.description_type = "action_completed" if completed else "action_timeout"
                         room.latest_description = response_text
                         room.description_timestamp = time.time()
 
+                        t0 = time.time()
                         mp3_bytes = await generate_speech(response_text, room.tone_value)
+                        tts_time = time.time() - t0
+                        log.info(f"[{code}] TTS (action response): {tts_time:.1f}s")
                         if mp3_bytes:
                             audio_ts = room.description_timestamp
                             room.audio_files[audio_ts] = mp3_bytes
 
-                        reason = "completed" if completed else f"timed out ({elapsed:.0f}s)"
+                        reason = "completed" if completed else f"timed out ({elapsed_since_request:.0f}s)"
                         log.info(f"[{code}] Action {reason}: '{room.action_requested}' -> commenting")
 
                         # Transition back to commenting
@@ -772,8 +801,6 @@ async def _analysis_loop(room: Room):
                         room.action_requested = ""
                         room.action_last_comment_time = time.time()
                         room._action_phase_version += 1
-                    else:
-                        log.debug(f"[{code}] Action not yet completed ({elapsed:.0f}s elapsed)")
 
                 consecutive_failures = 0
 
@@ -796,11 +823,18 @@ async def _analysis_loop(room: Room):
                     consecutive_failures = 0
                     await asyncio.sleep(30)
 
-            # Sleep remaining interval
-            elapsed = time.time() - cycle_start
-            remaining = interval - elapsed
-            if remaining > 0:
-                await asyncio.sleep(remaining)
+            # Sleep remaining interval — wake early if action phase changes
+            initial_phase = room.action_phase
+            cycle_elapsed = time.time() - cycle_start
+            remaining = interval - cycle_elapsed
+            log.info(f"[{code}] Cycle done: total={cycle_elapsed:.1f}s, sleeping={max(0, remaining):.1f}s")
+            while remaining > 0:
+                step = min(remaining, 0.3)
+                await asyncio.sleep(step)
+                remaining -= step
+                if room.action_phase != initial_phase:
+                    log.info(f"[{code}] Sleep interrupted: phase changed {initial_phase} -> {room.action_phase}")
+                    break
 
     except asyncio.CancelledError:
         log.info(f"[{code}] Analysis loop cancelled")

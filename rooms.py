@@ -61,6 +61,7 @@ class Room:
     gemini: GeminiVision | None = None
     latest_description: str = ""
     description_timestamp: float = 0.0
+    description_type: str = "commentary"  # "commentary" | "action_request" | "action_completed" | "action_timeout"
     cycle_count: int = 0
     lyrics_index: int = 0
     lyrics_line: str = ""

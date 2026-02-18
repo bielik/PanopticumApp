@@ -684,6 +684,13 @@
         return '<span class="tone-tag tone-judgmental">Judgmental</span>';
     }
 
+    function actionTag(descType) {
+        if (descType === "action_request") return ' <span class="tone-tag action-tag action-request">Action</span>';
+        if (descType === "action_completed") return ' <span class="tone-tag action-tag action-completed">Completed</span>';
+        if (descType === "action_timeout") return ' <span class="tone-tag action-tag action-timeout">Timeout</span>';
+        return "";
+    }
+
     function renderMessageLog() {
         if (!messageLogList) return;
         if (messageLog.length === 0) {
@@ -694,13 +701,14 @@
         for (var i = 0; i < messageLog.length; i++) {
             var msg = messageLog[i];
             var cls = "message-log-item";
+            if (msg.descType && msg.descType !== "commentary") cls += " action-entry";
             if (i === 0) {
                 cls += " latest";
             } else if (!msg.played && msg.serverTimestamp) {
                 cls += " skipped";
             }
             html += '<div class="' + cls + '">';
-            html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + '</span>';
+            html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + actionTag(msg.descType) + '</span>';
             html += '<span class="message-log-text">' + escapeHtml(msg.text) + '</span>';
             html += '</div>';
         }
@@ -713,7 +721,7 @@
         return div.innerHTML;
     }
 
-    function addToMessageLog(text, tone, serverTimestamp) {
+    function addToMessageLog(text, tone, serverTimestamp, descType) {
         var now = new Date();
         var h = String(now.getHours()).padStart(2, "0");
         var mi = String(now.getMinutes()).padStart(2, "0");
@@ -724,6 +732,7 @@
             tone: tone !== undefined ? tone : 0.5,
             serverTimestamp: serverTimestamp || null,
             played: false,
+            descType: descType || "commentary",
         });
         if (messageLog.length > MAX_LOG_MESSAGES) messageLog.pop();
         renderMessageLog();
@@ -808,7 +817,7 @@
 
     evtSource.addEventListener("description", function (e) {
         var data = JSON.parse(e.data);
-        if (data.text) addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null);
+        if (data.text) addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null, data.type || "commentary");
     });
 
     evtSource.addEventListener("effect", function (e) {
