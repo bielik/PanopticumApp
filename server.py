@@ -528,6 +528,7 @@ async def _sse_generator(room: Room):
                 else:
                     events.append(("audio", json.dumps({
                         "url": f"/room/{room.id}/audio/{audio_ts}",
+                        "timestamp": audio_ts,
                     })))
 
         # Clean up stale keys from emitted set

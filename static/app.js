@@ -422,12 +422,6 @@
     var pendingAudio = null;       // only the latest waiting item
     var isPlayingAudio = false;
 
-    function extractTimestampFromUrl(url) {
-        // URL pattern: /room/{room_id}/audio/{timestamp}
-        var parts = url.split("/");
-        return parts[parts.length - 1];
-    }
-
     function markLogEntryPlayed(audioTimestamp) {
         for (var i = 0; i < messageLog.length; i++) {
             if (messageLog[i].serverTimestamp === audioTimestamp) {
@@ -458,8 +452,6 @@
 
     function startPlaying(item) {
         isPlayingAudio = true;
-        var ts = extractTimestampFromUrl(item.url);
-        markLogEntryPlayed(ts);
         item.player.src = item.url;
         item.player.play().catch(function (err) {
             console.warn("Audio play error:", err);
@@ -778,11 +770,12 @@
         renderClientList(data.clients || []);
     });
 
-    // Audio events (worker mode)
+    // Audio events (both modes mark log entries; only worker plays audio)
     evtSource.addEventListener("audio", function (e) {
-        if (MODE !== "worker") return;
         var data = JSON.parse(e.data);
-        if (data.url) playAudio(data.url);
+        var ts = data.timestamp ? String(data.timestamp) : null;
+        if (ts) markLogEntryPlayed(ts);
+        if (MODE === "worker" && data.url) playAudio(data.url);
     });
 
     evtSource.addEventListener("audio_robotic", function (e) {

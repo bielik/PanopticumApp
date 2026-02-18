@@ -50,7 +50,6 @@ def load_narration_prompt(config):
         log.warning(f"Narration prompt not found: {prompt_path}. Using built-in default.")
         return (
             "You are an automated surveillance monitoring system.\n"
-            "Previous observations: {history}\n"
             "Last spoken report: {last_spoken}\n"
             "If NOTHING changed, respond: NO_CHANGE\n"
             "Otherwise respond with a 2-5 word surveillance status fragment."
@@ -76,9 +75,7 @@ class GeminiVision:
 
         # Unified mode state (vision + narration in one call)
         self.narration_prompt = load_narration_prompt(config)
-        self.history = []
         narrator_cfg = config.get("narrator", {})
-        self.max_history = narrator_cfg.get("max_history", 10)
         self.stale_timeout = narrator_cfg.get("stale_timeout", 10)
         self.last_spoken = ""
         self.last_spoken_time = 0.0
@@ -137,13 +134,8 @@ class GeminiVision:
                 "If something DID change in work behavior, respond with a 3-8 word performance update."
             )
 
-        # Build history context
-        history_text = "\n".join(f"[{i+1}] {d}" for i, d in enumerate(self.history))
-
         prompt = self.narration_prompt.format(
-            history=history_text or "(no previous observations)",
             last_spoken=self.last_spoken or "(nothing yet)",
-            count=len(self.history),
             mode=mode_text,
         )
 
@@ -159,12 +151,6 @@ class GeminiVision:
         result = response.text.strip()
 
         is_no_change = self._is_no_change(result)
-
-        # Only store real observations in history (not NO_CHANGE)
-        if not is_no_change:
-            self.history.append(result)
-            if len(self.history) > self.max_history:
-                self.history.pop(0)
 
         tag = "  [intro]" if needs_introduction else ("  [stale]" if force_describe else "")
         log.info(f"Gemini unified: {result[:80]}{tag}")
