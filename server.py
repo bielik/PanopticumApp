@@ -651,10 +651,17 @@ async def _analysis_loop(room: Room):
 
     consecutive_failures = 0
     max_failures = 5
+    skip_next_cycle = False  # Skip after NO_CHANGE to reduce API rate
 
     try:
         while room.active:
             cycle_start = time.time()
+
+            # Skip cycle after NO_CHANGE to stay under Gemini rate limits (~15 RPM)
+            if skip_next_cycle and room.action_phase == "commenting":
+                skip_next_cycle = False
+                await asyncio.sleep(interval)
+                continue
 
             # Wait for a frame
             if room.latest_frame_jpeg is None:
@@ -684,7 +691,9 @@ async def _analysis_loop(room: Room):
                     gemini_time = time.time() - t0
                     log.info(f"[{code}] Gemini describe_and_narrate: {gemini_time:.1f}s -> {'NO_CHANGE' if narration is None else repr(narration[:60])}")
 
-                    if narration is not None:
+                    if narration is None:
+                        skip_next_cycle = True
+                    else:
                         room.description_type = "commentary"
                         room.latest_description = narration
                         room.description_timestamp = time.time()
@@ -824,9 +833,11 @@ async def _analysis_loop(room: Room):
                     await asyncio.sleep(30)
 
             # Sleep remaining interval — wake early if action phase changes
+            # Use longer interval during verification to reduce API pressure
             initial_phase = room.action_phase
+            effective_interval = 5 if initial_phase == "action_verifying" else interval
             cycle_elapsed = time.time() - cycle_start
-            remaining = interval - cycle_elapsed
+            remaining = effective_interval - cycle_elapsed
             log.info(f"[{code}] Cycle done: total={cycle_elapsed:.1f}s, sleeping={max(0, remaining):.1f}s")
             while remaining > 0:
                 step = min(remaining, 0.3)
