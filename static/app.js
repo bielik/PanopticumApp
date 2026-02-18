@@ -5,7 +5,7 @@
 
     // --- Room & mode from server-injected globals ---
     var ROOM = window.ROOM_CODE || "";
-    var MODE = window.PAGE_MODE || "controller"; // "controller" or "exhibition"
+    var MODE = window.PAGE_MODE || "controller"; // "controller" or "worker"
     var API = "/room/" + ROOM + "/api";
 
     // --- Client identity ---
@@ -37,12 +37,13 @@
     var scanlines = document.querySelector(".scanlines");
     var vignette = document.querySelector(".vignette");
 
-    // Camera elements (both controller and exhibition now)
+    // Camera elements (both controller and worker)
     var localVideo = document.getElementById("local-video");
     var captureCanvas = document.getElementById("capture-canvas");
 
-    // Exhibition-specific elements
-    var exhibitStream = document.getElementById("exhibit-stream");
+    // Worker-specific elements
+    var workerStream = document.getElementById("worker-stream");
+    var workerIdleMessage = document.getElementById("worker-idle-message");
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
 
@@ -128,9 +129,11 @@
     }
 
     function showMjpegStream() {
-        if (exhibitStream && !isActiveSource) {
-            exhibitStream.src = "/room/" + ROOM + "/stream";
-            exhibitStream.style.display = "";
+        // Don't show stream on worker page when session is not active
+        if (MODE === "worker" && !isActive) return;
+        if (workerStream && !isActiveSource) {
+            workerStream.src = "/room/" + ROOM + "/stream";
+            workerStream.style.display = "";
         }
         if (localVideo) {
             localVideo.style.display = "none";
@@ -156,7 +159,7 @@
     }
 
     // =========================================================================
-    // Camera (works on both controller and exhibition)
+    // Camera (works on both controller and worker)
     // =========================================================================
     function startCamera(deviceId) {
         var constraints;
@@ -183,8 +186,8 @@
                 localVideo.style.display = "";
             }
             // Hide MJPEG stream when we're the source
-            if (exhibitStream) {
-                exhibitStream.style.display = "none";
+            if (workerStream) {
+                workerStream.style.display = "none";
             }
             console.log("Camera started");
             populateCameraSelector();
@@ -206,7 +209,7 @@
 
     function startFrameUpload() {
         if (frameUploadInterval) return;
-        frameUploadInterval = setInterval(uploadFrame, 250); // ~4fps for smooth exhibition
+        frameUploadInterval = setInterval(uploadFrame, 250); // ~4fps for smooth worker display
     }
 
     function stopFrameUpload() {
@@ -241,7 +244,7 @@
     function applyVideoFilter(effect) {
         var filter = EFFECT_FILTERS[effect] || "none";
         if (localVideo) localVideo.style.filter = filter;
-        if (exhibitStream) exhibitStream.style.filter = filter;
+        if (workerStream) workerStream.style.filter = filter;
     }
 
     // =========================================================================
@@ -256,9 +259,9 @@
 
         if (amISource && !wasSource) {
             // I became the source — abort MJPEG, start camera
-            if (exhibitStream) {
-                exhibitStream.src = "";
-                exhibitStream.style.display = "none";
+            if (workerStream) {
+                workerStream.src = "";
+                workerStream.style.display = "none";
             }
             startCamera();
             if (isActive) startFrameUpload();
@@ -267,9 +270,9 @@
             stopFrameUpload();
             stopCamera();
             if (localVideo) localVideo.style.display = "none";
-            if (exhibitStream) {
-                exhibitStream.style.display = "";
-                exhibitStream.src = "/room/" + ROOM + "/stream";
+            if (workerStream) {
+                workerStream.style.display = "";
+                workerStream.src = "/room/" + ROOM + "/stream";
             }
         }
     }
@@ -384,52 +387,101 @@
     }
 
     // =========================================================================
-    // Exhibition mode setup
+    // Worker mode setup
     // =========================================================================
-    function setupExhibition() {
-        if (MODE !== "exhibition" || !exhibitStream) return;
-        exhibitStream.src = "/room/" + ROOM + "/stream";
+    function setupWorker() {
+        if (MODE !== "worker" || !workerStream) return;
+        // Don't start the MJPEG stream — show idle message until session becomes active
     }
 
-    // Audio playback queue for exhibition
-    var audioQueue = [];
+    // =========================================================================
+    // Worker idle state
+    // =========================================================================
+    function updateWorkerIdleState(active) {
+        if (MODE !== "worker") return;
+        if (active) {
+            // Session active — hide idle message, show video
+            if (workerIdleMessage) workerIdleMessage.style.display = "none";
+            if (isActiveSource) {
+                if (localVideo) localVideo.style.display = "";
+            } else {
+                showMjpegStream();
+            }
+        } else {
+            // Session stopped — show idle message, hide video
+            if (workerIdleMessage) workerIdleMessage.style.display = "flex";
+            if (workerStream) {
+                workerStream.src = "";
+                workerStream.style.display = "none";
+            }
+            if (localVideo) localVideo.style.display = "none";
+        }
+    }
+
+    // Audio playback — "latest wins" strategy (no FIFO queue)
+    var pendingAudio = null;       // only the latest waiting item
     var isPlayingAudio = false;
+
+    function extractTimestampFromUrl(url) {
+        // URL pattern: /room/{room_id}/audio/{timestamp}
+        var parts = url.split("/");
+        return parts[parts.length - 1];
+    }
+
+    function markLogEntryPlayed(audioTimestamp) {
+        for (var i = 0; i < messageLog.length; i++) {
+            if (messageLog[i].serverTimestamp === audioTimestamp) {
+                messageLog[i].played = true;
+                renderMessageLog();
+                break;
+            }
+        }
+    }
 
     function playAudio(url) {
         if (!audioPlayer) return;
-        audioQueue.push({ url: url, player: audioPlayer });
-        processAudioQueue();
+        if (isPlayingAudio) {
+            // Replace whatever was pending — latest wins
+            pendingAudio = { url: url, player: audioPlayer };
+        } else {
+            // Nothing playing — start immediately
+            startPlaying({ url: url, player: audioPlayer });
+        }
     }
 
     function playRoboticAudio(url) {
         if (!audioRoboticPlayer) return;
-        audioQueue.push({ url: url, player: audioRoboticPlayer });
-        processAudioQueue();
+        // Lyrics are best-effort — skip if narration is playing or pending
+        if (isPlayingAudio || pendingAudio) return;
+        startPlaying({ url: url, player: audioRoboticPlayer });
     }
 
-    function processAudioQueue() {
-        if (isPlayingAudio || audioQueue.length === 0) return;
+    function startPlaying(item) {
         isPlayingAudio = true;
-
-        var item = audioQueue.shift();
-        var player = item.player;
-        player.src = item.url;
-        player.play().then(function () {
-            // playing
-        }).catch(function (err) {
+        var ts = extractTimestampFromUrl(item.url);
+        markLogEntryPlayed(ts);
+        item.player.src = item.url;
+        item.player.play().catch(function (err) {
             console.warn("Audio play error:", err);
             isPlayingAudio = false;
-            processAudioQueue();
+            playNext();
         });
+        item.player.onended = function () {
+            isPlayingAudio = false;
+            playNext();
+        };
+        item.player.onerror = function () {
+            isPlayingAudio = false;
+            playNext();
+        };
+    }
 
-        player.onended = function () {
-            isPlayingAudio = false;
-            processAudioQueue();
-        };
-        player.onerror = function () {
-            isPlayingAudio = false;
-            processAudioQueue();
-        };
+    function playNext() {
+        if (pendingAudio) {
+            var item = pendingAudio;
+            pendingAudio = null;
+            startPlaying(item);
+        }
     }
 
     // =========================================================================
@@ -439,11 +491,11 @@
         isActive = active;
         if (!startStopBtn) return;
         if (active) {
-            startStopBtn.textContent = "STOP";
+            startStopBtn.textContent = "STOP PANOPTICUM";
             startStopBtn.classList.remove("inactive");
             startStopBtn.classList.add("active");
         } else {
-            startStopBtn.textContent = "START";
+            startStopBtn.textContent = "START PANOPTICUM";
             startStopBtn.classList.remove("active");
             startStopBtn.classList.add("inactive");
         }
@@ -641,7 +693,12 @@
         var html = "";
         for (var i = 0; i < messageLog.length; i++) {
             var msg = messageLog[i];
-            var cls = i === 0 ? "message-log-item latest" : "message-log-item";
+            var cls = "message-log-item";
+            if (i === 0) {
+                cls += " latest";
+            } else if (!msg.played && msg.serverTimestamp) {
+                cls += " skipped";
+            }
             html += '<div class="' + cls + '">';
             html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + '</span>';
             html += '<span class="message-log-text">' + escapeHtml(msg.text) + '</span>';
@@ -656,12 +713,18 @@
         return div.innerHTML;
     }
 
-    function addToMessageLog(text, tone) {
+    function addToMessageLog(text, tone, serverTimestamp) {
         var now = new Date();
         var h = String(now.getHours()).padStart(2, "0");
         var mi = String(now.getMinutes()).padStart(2, "0");
         var s = String(now.getSeconds()).padStart(2, "0");
-        messageLog.unshift({ text: text, time: h + ":" + mi + ":" + s, tone: tone !== undefined ? tone : 0.5 });
+        messageLog.unshift({
+            text: text,
+            time: h + ":" + mi + ":" + s,
+            tone: tone !== undefined ? tone : 0.5,
+            serverTimestamp: serverTimestamp || null,
+            played: false,
+        });
         if (messageLog.length > MAX_LOG_MESSAGES) messageLog.pop();
         renderMessageLog();
     }
@@ -674,6 +737,7 @@
     evtSource.addEventListener("active", function (e) {
         var data = JSON.parse(e.data);
         updateStartStopButton(data.active);
+        updateWorkerIdleState(data.active);
 
         // Auto-start/stop frame upload if we're the source
         if (isActiveSource) {
@@ -687,7 +751,7 @@
 
     evtSource.addEventListener("description", function (e) {
         var data = JSON.parse(e.data);
-        if (data.text) addToMessageLog(data.text, data.tone);
+        if (data.text) addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null);
     });
 
     evtSource.addEventListener("effect", function (e) {
@@ -714,15 +778,15 @@
         renderClientList(data.clients || []);
     });
 
-    // Audio events (exhibition mode)
+    // Audio events (worker mode)
     evtSource.addEventListener("audio", function (e) {
-        if (MODE !== "exhibition") return;
+        if (MODE !== "worker") return;
         var data = JSON.parse(e.data);
         if (data.url) playAudio(data.url);
     });
 
     evtSource.addEventListener("audio_robotic", function (e) {
-        if (MODE !== "exhibition") return;
+        if (MODE !== "worker") return;
         var data = JSON.parse(e.data);
         if (data.url) playRoboticAudio(data.url);
     });
@@ -754,6 +818,7 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
             updateStartStopButton(data.active);
+            updateWorkerIdleState(data.active);
             highlightEffectPill(data.effect);
             updateOverlayForEffect(data.effect);
             currentEffect = data.effect;
@@ -803,7 +868,7 @@
         if (localVideo) {
             localVideo.style.display = "none";
         }
-    } else if (MODE === "exhibition") {
-        setupExhibition();
+    } else if (MODE === "worker") {
+        setupWorker();
     }
 })();

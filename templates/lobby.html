@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM</title>
-    <link rel="stylesheet" href="/static/style.css?v=11">
+    <link rel="stylesheet" href="/static/style.css?v=12">
 </head>
 <body>
     <div class="lobby">
@@ -71,7 +71,7 @@
             .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
             .then(function(res) {
                 if (res.ok) {
-                    window.location.href = "/room/" + res.data.code;
+                    window.open("/room/" + res.data.code, "_blank");
                 } else {
                     joinError.textContent = res.data.error || "Room not found.";
                     joinError.style.display = "block";
@@ -103,8 +103,8 @@
             .then(function(res) {
                 if (res.ok) {
                     createSuccess.innerHTML = 'Room created: <strong>' + res.data.code + '</strong>' +
-                        '<br><a href="/room/' + res.data.code + '">Open Controller</a>' +
-                        ' &middot; <a href="/room/' + res.data.code + '/exhibit">Open Exhibition</a>';
+                        '<br><a href="/room/' + res.data.code + '" target="_blank">Open Controller</a>' +
+                        ' &middot; <a href="/room/' + res.data.code + '/worker" target="_blank">Open Worker</a>';
                     createSuccess.style.display = "block";
                     // Also put the code in the join field for convenience
                     joinCode.value = res.data.code;

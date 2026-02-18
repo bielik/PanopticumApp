@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PANOPTICUM — Exhibition</title>
-    <link rel="stylesheet" href="/static/style.css?v=11">
+    <title>PANOPTICUM — Worker</title>
+    <link rel="stylesheet" href="/static/style.css?v=12">
 </head>
-<body class="exhibit-mode">
+<body class="worker-mode">
     <div class="video-container">
-        <img id="exhibit-stream" src="" alt="Live Feed">
+        <img id="worker-stream" src="" alt="Live Feed">
         <video id="local-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:cover;"></video>
         <canvas id="capture-canvas" style="display:none"></canvas>
         <div class="scanlines"></div>
@@ -33,6 +33,12 @@
             <div class="motivational-message" id="motivational-message"><span class="motivational-message-text" id="motivational-text"></span></div>
         </div>
 
+        <!-- Worker idle message (shown when session is not active) -->
+        <div class="worker-idle-message" id="worker-idle-message">
+            <p>Panopticum Interrupted</p>
+            <p class="worker-idle-sub">Wait for instructions from the control room</p>
+        </div>
+
         <!-- Audio elements for TTS playback -->
         <audio id="audio-player" preload="none"></audio>
         <audio id="audio-robotic-player" preload="none"></audio>
@@ -40,8 +46,8 @@
 
     <script>
         window.ROOM_CODE = "{{ room_code }}";
-        window.PAGE_MODE = "exhibition";
+        window.PAGE_MODE = "worker";
     </script>
-    <script src="/static/app.js?v=11"></script>
+    <script src="/static/app.js?v=12"></script>
 </body>
 </html>

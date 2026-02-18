@@ -6,7 +6,7 @@ echo ==========================================
 echo.
 echo Starting web server...
 echo Open http://localhost:8000/ for controls
-echo Open http://localhost:8000/exhibit for exhibition mode
+echo Open http://localhost:8000/worker for worker mode
 echo Press Ctrl+C to quit.
 echo.
 

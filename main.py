@@ -10,7 +10,7 @@ Usage:
     python main.py --help   # Show options
 
 Open http://localhost:8000/ in a browser for controls.
-Open http://localhost:8000/exhibit for exhibition mode.
+Open http://localhost:8000/worker for worker mode.
 """
 
 import logging
@@ -525,7 +525,7 @@ def main():
 
     log.info(f"Starting web server at http://{host}:{port}")
     log.info(f"  Control:    http://localhost:{port}/")
-    log.info(f"  Exhibition: http://localhost:{port}/exhibit")
+    log.info(f"  Worker:     http://localhost:{port}/worker")
 
     try:
         uvicorn.run(server.app, host=host, port=port, log_level="warning")

@@ -36,7 +36,7 @@ def _generate_code() -> str:
 @dataclass
 class Client:
     id: str                     # UUID from browser sessionStorage
-    role: str                   # "controller" or "exhibition"
+    role: str                   # "controller" or "worker"
     label: str = ""             # e.g. "Controller (Win32)"
     last_heartbeat: float = 0.0
 
@@ -53,7 +53,7 @@ class Room:
     tone_value: float = 0.5
     tone_preamble: str = field(default="")
 
-    # Frame relay (controller -> exhibition)
+    # Frame relay (controller -> worker)
     latest_frame_jpeg: bytes | None = None
     frame_timestamp: float = 0.0
 

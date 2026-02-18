@@ -1,7 +1,7 @@
 """
 server.py — FastAPI web server for PANOPTICUM (HuggingFace Spaces).
 
-Room-scoped routes: lobby, controller, exhibition, MJPEG relay, SSE, audio.
+Room-scoped routes: lobby, controller, worker, MJPEG relay, SSE, audio.
 Per-room async analysis loop using Gemini vision + edge-tts.
 """
 
@@ -159,16 +159,16 @@ async def controller_page(request: Request, code: str):
     })
 
 
-@app.get("/room/{code}/exhibit", response_class=HTMLResponse)
-async def exhibit_page(request: Request, code: str):
-    """Exhibition page — fullscreen video + overlays + audio."""
+@app.get("/room/{code}/worker", response_class=HTMLResponse)
+async def worker_page(request: Request, code: str):
+    """Worker page — fullscreen video + overlays + audio."""
     room = get_room(code)
     if not room:
         return templates.TemplateResponse("lobby.html", {
             "request": request, "error": f"Room {code} not found."
         })
     room.touch()
-    return templates.TemplateResponse("exhibit.html", {
+    return templates.TemplateResponse("worker.html", {
         "request": request, "room_code": code,
     })
 
@@ -342,7 +342,7 @@ async def room_register_client(code: str, req: RegisterRequest):
     room = get_room(code)
     if not room:
         return JSONResponse(status_code=404, content={"error": "Room not found"})
-    if req.role not in ("controller", "exhibition"):
+    if req.role not in ("controller", "worker"):
         return JSONResponse(status_code=400, content={"error": "Invalid role"})
     client = register_client(room, req.client_id, req.role, req.label)
     room.touch()
@@ -427,7 +427,7 @@ async def room_upload_frame(code: str, req: FrameRequest):
 
 
 # ---------------------------------------------------------------------------
-# MJPEG stream (server -> exhibition)
+# MJPEG stream (server -> worker)
 # ---------------------------------------------------------------------------
 async def _mjpeg_generator(room: Room):
     """Yield MJPEG frames from a room's latest frame."""
@@ -458,7 +458,7 @@ async def room_video_stream(code: str):
 
 
 # ---------------------------------------------------------------------------
-# SSE events (server -> controller + exhibition)
+# SSE events (server -> controller + worker)
 # ---------------------------------------------------------------------------
 async def _sse_generator(room: Room):
     """Push state changes as Server-Sent Events for a room."""

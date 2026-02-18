@@ -21,7 +21,7 @@ PANOPTICUM runs in two distinct modes depending on the context:
 |---|---|---|
 | Entry point | `python main.py` | `server.py` via Docker |
 | Camera | USB/built-in via OpenCV | Browser `getUserMedia` |
-| TTS output | Local speakers (pyttsx3/edge-tts) | MP3 streamed to exhibition browser |
+| TTS output | Local speakers (pyttsx3/edge-tts) | MP3 streamed to worker browser |
 | Users | Single operator | Multiple rooms, multiple clients per room |
 | Video relay | Direct OpenCV → MJPEG | Browser → base64 POST → server MJPEG |
 | URL | `http://localhost:8000` | [huggingface.co/spaces/MartinBLK/Panopticum](https://huggingface.co/spaces/MartinBLK/Panopticum) |
@@ -64,7 +64,7 @@ Three background threads share state through a `SharedState` dataclass with thre
 ### HuggingFace Spaces Architecture
 
 ```
-Browser (Controller)        server.py              Browser (Exhibition)
+Browser (Controller)        server.py              Browser (Worker)
   │                            │                        │
   ├─ getUserMedia ─────────────┤                        │
   │   (camera capture)         │                        │
@@ -104,10 +104,10 @@ Multiple browsers can connect to the same room. Only one client at a time is the
 
 - **Client registration:** Each browser generates a UUID (`crypto.randomUUID()`) stored in `sessionStorage` and registers with the server on page load.
 - **Heartbeat:** Every 10 seconds, clients send a keep-alive. Stale clients (no heartbeat for 15s) are automatically removed.
-- **Source designation:** The first controller to connect becomes the source automatically. Any connected device (controller or exhibition) can be manually set as the source via the "Connected Devices" panel.
+- **Source designation:** The first controller to connect becomes the source automatically. Any connected device (controller or worker) can be manually set as the source via the "Connected Devices" panel.
 - **Non-source controllers:** Controllers that are not the active source display the MJPEG stream from the source device, so all screens show the same feed. Camera permission is only requested when a device becomes the source.
 - **Frame rejection:** The server returns 403 for frame uploads from non-source clients, preventing visual chaos from multiple uploaders.
-- **Exhibition as source:** The exhibition device can run its own camera — when designated as source, it hides the MJPEG stream, activates `getUserMedia`, and uploads frames.
+- **Worker as source:** The worker device can run its own camera — when designated as source, it hides the MJPEG stream, activates `getUserMedia`, and uploads frames.
 - **Camera picker:** The active source device shows a dropdown to switch between available cameras.
 
 ---
@@ -145,15 +145,15 @@ CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860"]
 |-----|------|-------------|
 | `/` | Lobby | Create room (admin) or join room (code) |
 | `/room/{code}` | Controller | Camera feed + controls + activity log |
-| `/room/{code}/exhibit` | Exhibition | Fullscreen display, no controls, hidden cursor |
+| `/room/{code}/worker` | Worker | Fullscreen display, no controls, hidden cursor |
 
 ### User Flow
 
 1. **Admin** opens the Space URL → enters admin password → clicks **Create**
-2. A room code is generated (e.g. `PANOPT-7X3K`) with links to controller and exhibition
+2. A room code is generated (e.g. `PANOPT-7X3K`) with links to controller and worker
 3. **Admin** opens the controller page → automatically becomes the video source → browser requests camera permission
-4. **Admin** clicks **START** → camera feed uploads to server, Gemini analysis begins
-5. **Exhibition device** joins via code or direct link → shows fullscreen MJPEG stream + audio narration
+4. **Admin** clicks **START PANOPTICUM** → camera feed uploads to server, Gemini analysis begins
+5. **Worker device** joins via code or direct link → shows fullscreen MJPEG stream + audio narration
 6. **Additional controllers** can join — they see the MJPEG stream from the source device (no camera prompt); only the designated source uploads frames
 7. Source can be switched to any connected device via the "Connected Devices" panel
 8. Room expires after 30 minutes of inactivity
@@ -217,9 +217,9 @@ This single command starts everything — the web server, camera system, AI anal
 
 Once running, open a browser:
 - **Control page:** `http://localhost:8000/` — video feed + interactive controls
-- **Exhibition page:** `http://localhost:8000/exhibit` — fullscreen display, no controls, hidden cursor
+- **Worker page:** `http://localhost:8000/worker` — fullscreen display, no controls, hidden cursor
 
-The camera and analysis pipeline start **stopped**. Click **START** in the web UI to begin. Click **STOP** to pause (releases camera, zero API calls). The web server stays running either way.
+The camera and analysis pipeline start **stopped**. Click **START PANOPTICUM** in the web UI to begin. Click **STOP PANOPTICUM** to pause (releases camera, zero API calls). The web server stays running either way.
 
 To shut down, press **Ctrl+C** in the terminal.
 
@@ -230,8 +230,8 @@ To shut down, press **Ctrl+C** in the terminal.
 ### Controls (Controller Page)
 
 **Start/Stop** — A single toggle button controls the entire pipeline:
-- **START** (blue) — begins camera capture, AI analysis, and TTS narration
-- **STOP** (red) — releases camera, halts all API calls
+- **START PANOPTICUM** (blue) — begins camera capture, AI analysis, and TTS narration
+- **STOP PANOPTICUM** (red) — releases camera, halts all API calls
 
 **Video Effects** — Display-only filters (the AI always analyzes the raw frame):
 - **Insta** — warm sepia tones with vignette overlay and rotating motivational messages
@@ -245,7 +245,7 @@ To shut down, press **Ctrl+C** in the terminal.
 
 **Sync Toggle** — Links effect and tone: Insta ↔ Supportive, Natural ↔ Neutral, CCTV ↔ Judgmental.
 
-**Exhibition Link** — Direct link to open the exhibition view for this room.
+**Worker Link** — Direct link to open the worker view for this room.
 
 **Source Controls** (HuggingFace Spaces only):
 - **Source status** — Shows whether this device is the active video source
@@ -255,11 +255,17 @@ To shut down, press **Ctrl+C** in the terminal.
 - Lists all connected browsers with role, label, and source status
 - **Set Source** button on each non-source device to switch which device uploads frames
 
-**Activity Log** — Scrollable panel showing the last 10 AI observations with timestamps and tone tags. Collapsible via the × button.
+**Activity Log** — Scrollable panel showing the last 10 AI observations with timestamps and tone tags. Entries that were skipped (superseded by a newer description before they could be read aloud) appear dimmed with a ⏭ indicator. Collapsible via the × button.
 
-### Exhibition Page
+### Worker Page
 
-Fullscreen display with no controls, no cursor, black background. Shows the video feed with effect overlays and plays TTS audio. In CCTV mode, displays Radiohead's "Fitter Happier" lyrics every 4th analysis cycle when tone is judgmental.
+Fullscreen display with no controls, no cursor, black background. Shows the video feed with effect overlays and plays TTS audio. In CCTV mode, displays Radiohead's "Fitter Happier" lyrics every 4th analysis cycle when tone is judgmental. When the session is not active, shows an idle message: "Panopticum Interrupted — Wait for instructions from the control room."
+
+#### Audio Playback — "Latest Wins"
+
+The worker page uses a "latest wins" audio strategy to keep narration close to real-time. When a new description arrives while audio is already playing, all previously queued descriptions are discarded — only the latest one plays next. This prevents the accumulating delay that occurs when descriptions are generated faster than they can be read aloud. Currently playing audio is never interrupted; it finishes naturally before the latest pending description plays.
+
+Lyrics audio (Fitter Happier) is best-effort: it only plays when no narration is playing or pending, ensuring it never blocks scene descriptions.
 
 ### Overlays
 
@@ -319,22 +325,22 @@ All room-scoped endpoints are prefixed with `/room/{code}/api/`.
 | `effect` | `{effect: str}` | Effect changed |
 | `tone` | `{value: float}` | Tone changed |
 | `lyrics` | `{text: str}` | Fitter Happier lyrics line |
-| `audio` | `{url: str}` | New narration MP3 ready |
-| `audio_robotic` | `{url: str}` | New robotic lyrics MP3 ready |
+| `audio` | `{url: str}` | New narration MP3 ready (worker plays latest, skips stale) |
+| `audio_robotic` | `{url: str}` | New robotic lyrics MP3 ready (best-effort, skipped if narration active) |
 | `clients` | `{clients: [...], active_source: str}` | Client list changed (join/leave/source switch) |
 
 ---
 
 ## How It Works
 
-1. **Start** — Operator clicks START. Camera opens (local) or browser captures (HF Spaces). Analysis begins.
+1. **Start** — Operator clicks START PANOPTICUM. Camera opens (local) or browser captures (HF Spaces). Analysis begins.
 2. **Introduction** — Gemini describes the scene in a full sentence with the current tone personality.
 3. **Change detection** — Subsequent frames are compared against observation history (max 10). If nothing changed: silence. If something changed: a 3-8 word status update.
 4. **Stale refresh** — If silent for 10+ seconds, a scene description is forced (configurable via `stale_timeout`).
-5. **TTS** — New descriptions are spoken via edge-tts. In local mode, through speakers. In HF Spaces, MP3 is streamed to the exhibition browser.
-6. **Fitter Happier** — Every 4th cycle in judgmental mode: robotic female voice reads lyrics.
+5. **TTS** — New descriptions are spoken via edge-tts. In local mode, through speakers. In HF Spaces, MP3 is streamed to the worker browser. The worker page uses a "latest wins" strategy — if descriptions arrive faster than they can be spoken, only the most recent one plays next (skipped entries are marked in the activity log).
+6. **Fitter Happier** — Every 4th cycle in judgmental mode: robotic female voice reads lyrics. Lyrics are best-effort and only play when no narration is active or pending.
 7. **Fallback** (local only) — If Gemini hits rate limits or goes down, the app switches to the local Ollama pipeline.
-8. **Stop** — Operator clicks STOP. Camera releases, API calls cease, TTS goes silent.
+8. **Stop** — Operator clicks STOP PANOPTICUM. Camera releases, API calls cease, TTS goes silent.
 
 ---
 
@@ -358,13 +364,13 @@ PanopticumApp/
 ├── .env                 # API keys (not committed)
 │
 ├── static/
-│   ├── app.js           # Frontend logic (controller + exhibition, client registration)
+│   ├── app.js           # Frontend logic (controller + worker, client registration)
 │   └── style.css        # Styling (corporate surveillance aesthetic)
 │
 ├── templates/
 │   ├── lobby.html       # Room join/create page
 │   ├── control.html     # Controller page (camera + controls + client panel)
-│   └── exhibit.html     # Exhibition page (fullscreen, audio playback)
+│   └── worker.html      # Worker page (fullscreen, audio playback)
 │
 └── prompts/
     ├── gemini_surveillance.txt       # Gemini unified prompt (vision + narration)
@@ -424,20 +430,20 @@ Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free. Zero cost
 
 ---
 
-## For the Exhibition
+## For the Installation
 
 ### Local deployment
 - Run `python main.py` on the operator laptop
-- Open `http://localhost:8000/exhibit` on the display device (TV, projector, second monitor)
+- Open `http://localhost:8000/worker` on the display device (TV, projector, second monitor)
 - Open `http://localhost:8000/` on the operator's laptop or phone to control start/stop, effects, and tone
 - Click START when ready
 
 ### HuggingFace Spaces deployment
 - Create a room via the lobby with the admin password
 - Open the **controller** link on the operator's device
-- Open the **exhibition** link on the display device (TV, projector, kiosk)
-- Grant camera permission on the controller, click START
-- The exhibition device shows the fullscreen feed with audio narration
+- Open the **worker** link on the display device (TV, projector, kiosk)
+- Grant camera permission on the controller, click START PANOPTICUM
+- The worker device shows the fullscreen feed with audio narration
 - To use the display device's own camera: set it as the source in "Connected Devices"
 
 ### Tips
@@ -457,7 +463,7 @@ Gemini 2.0 Flash: ~$0.01/hour at 3-second intervals. Essentially free. Zero cost
 
 **No sound (local):** Check Windows audio output device. Make sure speakers are connected and volume is up.
 
-**No sound (HF Spaces):** The exhibition page must receive a user interaction (click/tap) before browsers allow audio autoplay. Click anywhere on the exhibition page after loading.
+**No sound (HF Spaces):** The worker page must receive a user interaction (click/tap) before browsers allow audio autoplay. Click anywhere on the worker page after loading.
 
 **Multiple controllers uploading frames:** Only the designated source client's frames are accepted. Other controllers' frame uploads are rejected with 403. Switch the source via the "Connected Devices" panel.
 

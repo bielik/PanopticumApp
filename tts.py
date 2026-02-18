@@ -2,7 +2,7 @@
 tts.py — Text-to-Speech for server-side MP3 generation.
 
 Generates MP3 bytes using edge-tts. No local playback — audio is served
-to the exhibition page via HTTP for browser-side playback.
+to the worker page via HTTP for browser-side playback.
 """
 
 import logging

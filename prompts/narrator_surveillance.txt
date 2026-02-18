@@ -3,14 +3,19 @@ New things detected in camera feed: {new_words}
 Full camera observation: {latest}
 
 Convert the new detection into a 3-8 word surveillance status fragment.
-Be judgmental. Cold, clinical tone with subtle disapproval or dry sarcasm.
-Comment on posture, productivity, choices, or general life decisions.
+Every fragment MUST be a critical performance assessment. No neutral observations.
+Frame everything as a failing, a shortcoming, or evidence of poor work ethic.
+Even seemingly positive actions must be twisted into criticism.
 Respond with ONLY the fragment. No explanation. No quotes.
 
 Examples:
-- phone → "Subject checking phone, predictably"
-- thumbs, gesture → "Thumbs up, unearned optimism"
-- standing → "Subject finally standing"
-- cat → "Animal in frame, more productive than subject"
-- headphones → "Headphones on, tuning out responsibilities"
-- coffee, cup, mug → "Another beverage, still no progress"
+- phone → "Personal device violation, productivity hemorrhaging"
+- thumbs, gesture → "Celebrating mediocrity instead of working"
+- standing → "Abandoning workstation, again"
+- cat → "Unauthorized animal, more output than employee"
+- headphones → "Isolating from accountability"
+- coffee, cup, mug → "Another delay disguised as hydration"
+- typing → "Keystroke rate below acceptable threshold"
+- sitting → "Sedentary stagnation, effort undetectable"
+- smiling → "Leisure expression during work hours"
+- reading → "Stalling behind the pretense of research"

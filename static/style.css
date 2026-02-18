@@ -283,8 +283,8 @@ body {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
 
-/* --- Exhibition link --- */
-.exhibit-link {
+/* --- Worker link --- */
+.worker-link {
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -297,7 +297,7 @@ body {
     flex-shrink: 0;
 }
 
-.exhibit-link:hover {
+.worker-link:hover {
     color: #4f46e5;
     background: #f0f1f5;
 }
@@ -547,6 +547,15 @@ body {
     color: #1a1a2e;
 }
 
+.message-log-item.skipped .message-log-text {
+    opacity: 0.45;
+}
+
+.message-log-item.skipped .message-log-time::after {
+    content: " \23ED";
+    font-size: 0.75em;
+}
+
 /* --- Source controls --- */
 .controls-source {
     display: flex;
@@ -773,38 +782,72 @@ body {
     }
 }
 
-/* --- Exhibition mode --- */
-body.exhibit-mode {
+/* --- Worker mode --- */
+body.worker-mode {
     cursor: none;
     background: #000;
 }
 
-body.exhibit-mode .dashboard {
+body.worker-mode .dashboard {
     padding: 0;
     gap: 0;
 }
 
-body.exhibit-mode .controls {
+body.worker-mode .controls {
     display: none;
 }
 
-body.exhibit-mode .message-log {
+body.worker-mode .message-log {
     display: none;
 }
 
-body.exhibit-mode .log-expand-btn {
+body.worker-mode .log-expand-btn {
     display: none !important;
 }
 
-body.exhibit-mode .video-panel {
+body.worker-mode .video-panel {
     height: 100vh;
     gap: 0;
 }
 
-body.exhibit-mode .video-container {
+body.worker-mode .video-container {
     width: 100vw;
     height: 100vh;
     border-radius: 0;
+}
+
+/* --- Worker idle message --- */
+.worker-idle-message {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+.worker-idle-message p {
+    color: #00ff41;
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    text-shadow: 0 0 20px rgba(0, 255, 65, 0.5), 0 0 40px rgba(0, 255, 65, 0.2);
+    margin: 0;
+}
+
+.worker-idle-message .worker-idle-sub {
+    color: #888;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: 2px;
+    text-shadow: none;
+    margin-top: 16px;
 }
 
 /* --- Lobby page --- */
