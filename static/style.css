@@ -833,16 +833,26 @@ body.worker-mode .video-container {
 }
 
 .worker-idle-message p {
-    color: #00ff41;
+    color: #fff;
     font-size: 2.5rem;
     text-transform: uppercase;
     letter-spacing: 6px;
-    text-shadow: 0 0 20px rgba(0, 255, 65, 0.5), 0 0 40px rgba(0, 255, 65, 0.2);
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.1);
     margin: 0;
+    animation: idle-glow 3s ease-in-out infinite;
+}
+
+@keyframes idle-glow {
+    0%, 100% {
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.9), 0 0 60px rgba(255, 255, 255, 0.5), 0 0 120px rgba(255, 255, 255, 0.25), 0 0 180px rgba(255, 255, 255, 0.1);
+    }
 }
 
 .worker-idle-message .worker-idle-sub {
-    color: #888;
+    color: rgba(255, 255, 255, 0.5);
     font-size: 1rem;
     text-transform: none;
     letter-spacing: 2px;
