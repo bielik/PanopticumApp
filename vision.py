@@ -159,7 +159,9 @@ class GeminiVision:
             log.debug(f"Gemini: NO_CHANGE (silent for {seconds_since_speech:.0f}s)")
             return None
 
-        self.last_spoken = result
+        # Truncate to first sentence to prevent snowballing context
+        first_sentence = result.split(".")[0] + "." if "." in result else result
+        self.last_spoken = first_sentence[:100]
         self.last_spoken_time = time.time()
         if needs_introduction:
             self.introduced = True
