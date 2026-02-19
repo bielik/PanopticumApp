@@ -2,6 +2,14 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
 
+:root {
+    --lumon-dark: #161E26;
+    --lumon-green-deep: #213525;
+    --lumon-green: #8DB07A;
+    --lumon-light: #E4E7E5;
+    --lumon-glow: rgba(141, 176, 122, 0.4);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -963,7 +971,7 @@ body.worker-mode .action-panel {
 /* --- Worker mode --- */
 body.worker-mode {
     cursor: none;
-    background: #000;
+    background: var(--lumon-dark);
 }
 
 body.worker-mode .dashboard {
@@ -994,48 +1002,174 @@ body.worker-mode .video-container {
     border-radius: 0;
 }
 
-/* --- Worker idle message --- */
+/* --- Worker idle screen (Lumon theme) --- */
 .worker-idle-message {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #000;
+    background: #7a9a86;
     z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 40px 20px;
+    overflow: hidden;
 }
 
-.worker-idle-message p {
-    color: #fff;
-    font-size: 2.5rem;
-    text-transform: uppercase;
-    letter-spacing: 6px;
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.1);
-    margin: 0;
-    animation: idle-glow 3s ease-in-out infinite;
+/* CRT scanline overlay — disabled for light background */
+.worker-idle-message::before {
+    display: none;
 }
 
-@keyframes idle-glow {
-    0%, 100% {
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(255, 255, 255, 0.1);
-    }
-    50% {
-        text-shadow: 0 0 30px rgba(255, 255, 255, 0.9), 0 0 60px rgba(255, 255, 255, 0.5), 0 0 120px rgba(255, 255, 255, 0.25), 0 0 180px rgba(255, 255, 255, 0.1);
-    }
+/* Vignette overlay */
+.worker-idle-message::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
+    pointer-events: none;
+    z-index: 2;
 }
 
-.worker-idle-message .worker-idle-sub {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 1rem;
-    text-transform: none;
+/* Content sits above overlays */
+.worker-idle-message > * {
+    position: relative;
+    z-index: 3;
+}
+
+.worker-idle-logo {
+    width: 160px;
+    margin-top: 200px;
+}
+
+.worker-idle-logo svg {
+    width: 100%;
+    height: auto;
+    fill: #fff;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+}
+
+.worker-idle-slogan {
+    font-size: clamp(3.5rem, 7vw, 5.5rem);
+    font-weight: 700;
     letter-spacing: 2px;
-    text-shadow: none;
-    margin-top: 16px;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 40px;
+}
+
+.worker-idle-clock {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    letter-spacing: 3px;
+    margin-bottom: 60px;
+}
+
+.worker-idle-room {
+    display: none;
+}
+
+.worker-idle-id {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 24px;
+}
+
+.worker-idle-id label {
+    display: none;
+}
+
+.worker-idle-id input {
+    flex: 1;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+    color: #fff;
+    outline: none;
+    text-align: center;
+    letter-spacing: 2px;
+    transition: border-color 0.2s;
+    cursor: text;
+}
+
+.worker-idle-id input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.worker-idle-id input:focus {
+    border-bottom-color: #fff;
+}
+
+.worker-idle-id button {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 10px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: transparent;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.worker-idle-id button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #fff;
+}
+
+.worker-idle-status {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    overflow: hidden;
+    white-space: nowrap;
+    width: fit-content;
+    max-width: 0;
+    animation: idle-typewriter 2.5s steps(35) 0.5s forwards, idle-cursor-blink 0.6s step-end infinite;
+    border-right: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+@keyframes idle-typewriter {
+    0% { max-width: 0; }
+    100% { max-width: 100%; }
+}
+
+@keyframes idle-cursor-blink {
+    0%, 100% { border-right-color: rgba(255, 255, 255, 0.7); }
+    50% { border-right-color: transparent; }
+}
+
+/* Show cursor on idle screen (body.worker-mode hides it globally) */
+.worker-idle-message {
+    cursor: default;
+}
+
+.worker-idle-message input {
+    cursor: text;
+}
+
+.worker-idle-message button {
+    cursor: pointer;
 }
 
 /* --- Lobby page --- */
