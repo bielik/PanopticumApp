@@ -987,6 +987,18 @@ body.worker-mode {
     background: var(--lumon-sage);
 }
 
+body.worker-mode::before {
+    content: '';
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 1px solid #fff;
+    pointer-events: none;
+    z-index: 9999;
+}
+
 body.worker-mode:active {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23161E26' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
@@ -1052,7 +1064,7 @@ body.worker-mode .video-container {
 
 .worker-idle-logo {
     position: absolute;
-    bottom: 60px;
+    bottom: 110px;
     left: 50%;
     transform: translateX(-50%);
     width: 160px;
@@ -1205,7 +1217,7 @@ body.worker-mode .video-container {
 
 .active-logo {
     position: absolute;
-    bottom: 60px;
+    bottom: 110px;
     left: 50%;
     transform: translateX(-50%);
     width: 160px;

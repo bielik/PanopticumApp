@@ -561,8 +561,8 @@
                 ctx.fillRect(0, 0, 1, 1);
                 $("#worker-active-screen").ripples({
                     resolution: 512,
-                    dropRadius: 60,
-                    perturbance: 0.08,
+                    dropRadius: 20,
+                    perturbance: 0.04,
                     interactive: true,
                     imageUrl: c.toDataURL()
                 });
