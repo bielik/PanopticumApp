@@ -20,36 +20,25 @@
     // --- Loading screen ---
     function showLoadingScreen(duration, callback) {
         var el = document.getElementById("loading-screen");
-        var ring = document.getElementById("loading-ring-fill");
-        var circumference = 226.2; // 2 * PI * 36
         if (!el) { if (callback) callback(); return; }
 
         el.classList.remove("hidden");
         el.style.display = "flex";
 
-        var start = Date.now();
-        var interval = setInterval(function () {
-            var elapsed = Date.now() - start;
-            var pct = Math.min(100, Math.round((elapsed / duration) * 100));
-            if (ring) ring.style.strokeDashoffset = circumference * (1 - pct / 100);
-            if (pct >= 100) {
-                clearInterval(interval);
-                setTimeout(function () {
-                    el.classList.add("hidden");
-                    setTimeout(function () {
-                        el.style.display = "none";
-                        if (callback) callback();
-                    }, 400);
-                }, 200);
-            }
-        }, 50);
+        setTimeout(function () {
+            el.style.display = "none";
+            if (window._loadingDrops) clearInterval(window._loadingDrops);
+            try { if (window.jQuery) $('#loading-screen').ripples('destroy'); } catch (e) {}
+            if (callback) callback();
+        }, duration);
     }
 
     function hideLoadingScreen() {
         var el = document.getElementById("loading-screen");
         if (!el) return;
-        el.classList.add("hidden");
-        setTimeout(function () { el.style.display = "none"; }, 400);
+        el.style.display = "none";
+        if (window._loadingDrops) clearInterval(window._loadingDrops);
+        try { if (window.jQuery) $('#loading-screen').ripples('destroy'); } catch (e) {}
     }
 
     // Show loading screen on page load

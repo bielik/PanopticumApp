@@ -7,9 +7,7 @@
     <link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body>
-    <div class="loading-screen" id="loading-screen">
-        <img class="loading-animation" src="/static/table-animation.gif?v=3" alt="">
-    </div>
+    <div class="loading-screen" id="loading-screen"></div>
     <div class="lobby">
         <div class="lobby-card">
             <h1 class="lobby-title">PANOPTICUM</h1>
@@ -44,24 +42,36 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/static/jquery.ripples.js"></script>
     <script>
     (function() {
         var el = document.getElementById("loading-screen");
-        var ring = document.getElementById("loading-ring-fill");
-        var circumference = 226.2;
         if (!el) return;
-        var start = Date.now(), dur = 5000;
-        var iv = setInterval(function() {
-            var pct = Math.min(100, Math.round(((Date.now() - start) / dur) * 100));
-            if (ring) ring.style.strokeDashoffset = circumference * (1 - pct / 100);
-            if (pct >= 100) {
-                clearInterval(iv);
-                setTimeout(function() {
-                    el.classList.add("hidden");
-                    setTimeout(function() { el.style.display = "none"; }, 400);
-                }, 200);
-            }
-        }, 50);
+        try {
+            var c = document.createElement('canvas');
+            c.width = 1; c.height = 1;
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#7a9a86';
+            ctx.fillRect(0, 0, 1, 1);
+            $('#loading-screen').ripples({
+                resolution: 512,
+                dropRadius: 20,
+                perturbance: 0.04,
+                interactive: false,
+                imageUrl: c.toDataURL()
+            });
+            var ls = document.getElementById('loading-screen');
+            window._loadingDrops = setInterval(function() {
+                if (ls.style.display === 'none') return;
+                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 20, 0.04);
+            }, 800);
+        } catch (e) {}
+        setTimeout(function() {
+            el.style.display = "none";
+            if (window._loadingDrops) clearInterval(window._loadingDrops);
+            try { $('#loading-screen').ripples('destroy'); } catch (e) {}
+        }, 5000);
     })();
     </script>
 

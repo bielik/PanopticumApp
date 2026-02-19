@@ -7,9 +7,7 @@
     <link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body class="worker-mode">
-    <div class="loading-screen" id="loading-screen">
-        <img class="loading-animation" src="/static/table-animation.gif?v=3" alt="">
-    </div>
+    <div class="loading-screen" id="loading-screen"></div>
     <div class="video-container">
         <img id="worker-stream" src="" alt="Live Feed">
         <video id="local-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:cover;"></video>
@@ -71,13 +69,26 @@
             var ctx = c.getContext('2d');
             ctx.fillStyle = '#7a9a86';
             ctx.fillRect(0, 0, 1, 1);
+            var rUrl = c.toDataURL();
             $('#worker-idle-message').ripples({
                 resolution: 512,
                 dropRadius: 20,
                 perturbance: 0.04,
                 interactive: true,
-                imageUrl: c.toDataURL()
+                imageUrl: rUrl
             });
+            $('#loading-screen').ripples({
+                resolution: 512,
+                dropRadius: 20,
+                perturbance: 0.04,
+                interactive: false,
+                imageUrl: rUrl
+            });
+            var ls = document.getElementById('loading-screen');
+            window._loadingDrops = setInterval(function() {
+                if (ls.style.display === 'none') return;
+                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 20, 0.04);
+            }, 800);
         } catch (e) {
             console.log('Ripples not supported:', e);
         }

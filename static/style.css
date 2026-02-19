@@ -18,12 +18,24 @@
 }
 
 body {
-    background: #ecedf1;
+    background: var(--lumon-sage);
     color: #1a1a2e;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
+    pointer-events: none;
+    z-index: 10000;
 }
 
 /* --- Dashboard layout --- */
@@ -972,7 +984,7 @@ body.worker-mode .action-panel {
 /* --- Worker mode --- */
 body.worker-mode {
     cursor: none;
-    background: var(--lumon-dark);
+    background: var(--lumon-sage);
 }
 
 body.worker-mode .dashboard {
@@ -1027,17 +1039,6 @@ body.worker-mode .video-container {
 }
 
 /* Vignette overlay */
-.worker-idle-message::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
-    pointer-events: none;
-    z-index: 2;
-}
 
 /* Content sits above overlays */
 .worker-idle-message > * {
@@ -1188,19 +1189,8 @@ body.worker-mode .video-container {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    transition: opacity 0.4s ease;
 }
 
-.loading-screen::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
-    pointer-events: none;
-}
 
 .loading-screen > * {
     position: relative;
@@ -1208,17 +1198,10 @@ body.worker-mode .video-container {
 }
 
 .loading-screen.hidden {
-    opacity: 0;
-    pointer-events: none;
+    display: none;
 }
 
 
-.loading-animation {
-    -webkit-mask-image: radial-gradient(ellipse at center, #000 40%, transparent 70%);
-    mask-image: radial-gradient(ellipse at center, #000 40%, transparent 70%);
-    opacity: 0.8;
-    mix-blend-mode: luminosity;
-}
 
 /* --- Lobby page --- */
 .lobby {
