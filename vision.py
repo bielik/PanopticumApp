@@ -109,9 +109,19 @@ class GeminiVision:
         """Check if the response indicates no change."""
         return "NOCHANGE" in text.upper().replace("_", "").replace(" ", "")
 
-    def describe_and_narrate(self, jpeg_bytes: bytes, tone_preamble: str = "") -> str | None:
+    def describe_and_narrate(self, jpeg_bytes: bytes, tone_preamble: str = "", max_words: int = 10) -> str | None:
         """Single-call vision + narration with memory. Returns narration or None."""
         from google.genai import types
+
+        # Compute scaled word ranges from max_words
+        intro_min = max(3, int(max_words * 0.8))
+        intro_max = max(5, int(max_words * 1.5))
+        stale_min = max(2, int(max_words * 0.4))
+        stale_max = max(4, int(max_words * 0.8))
+        change_min = max(2, int(max_words * 0.3))
+        change_max = max(3, int(max_words * 0.8))
+        long_threshold = max(10, max_words * 2)
+        retry_max = max(5, max_words)
 
         # Determine mode
         seconds_since_speech = time.time() - self.last_spoken_time if self.last_spoken_time else float("inf")
@@ -121,22 +131,25 @@ class GeminiVision:
         if needs_introduction:
             mode_text = (
                 "This is your FIRST report for this workstation. Describe who is present, "
-                "what they appear to be doing, and provide an initial performance assessment. 8-15 words."
+                "what they appear to be doing, and provide an initial performance assessment. "
+                f"{intro_min}-{intro_max} words."
             )
         elif seconds_since_speech >= self.stale_timeout:
             mode_text = (
-                "It has been a while since your last report. Provide a brief status update on current work activity, 4-8 words. "
+                "It has been a while since your last report. Provide a brief status update on current work activity, "
+                f"{stale_min}-{stale_max} words. "
                 "Always provide a description even if nothing changed."
             )
         else:
             mode_text = (
                 "If NOTHING meaningful changed since the last observation, respond with exactly: NO_CHANGE\n"
-                "If something DID change in work behavior, respond with a 3-8 word performance update."
+                f"If something DID change in work behavior, respond with a {change_min}-{change_max} word performance update."
             )
 
         prompt = self.narration_prompt.format(
             last_spoken=self.last_spoken or "(nothing yet)",
             mode=mode_text,
+            max_words=max_words,
         )
 
         # Prepend tone modifier if provided
@@ -161,12 +174,13 @@ class GeminiVision:
 
         # If response is too long, discard it and retry with blank context
         word_count = len(result.split())
-        if word_count > 20:
-            log.warning(f"Gemini response too long ({word_count} words), retrying with blank context")
+        if word_count > long_threshold:
+            log.warning(f"Gemini response too long ({word_count} words, limit {long_threshold}), retrying with blank context")
             self.last_spoken = ""
             retry_prompt = self.narration_prompt.format(
                 last_spoken="(nothing yet)",
-                mode="Describe what you see in one brief sentence, maximum 10 words.",
+                mode=f"Describe what you see in one brief sentence, maximum {retry_max} words.",
+                max_words=max_words,
             )
             if tone_preamble:
                 retry_prompt = tone_preamble + "\n" + retry_prompt

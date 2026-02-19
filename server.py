@@ -24,8 +24,8 @@ from pydantic import BaseModel
 
 from rooms import (
     Room, cleanup_expired, cleanup_stale_clients, create_room,
-    get_client_list, get_room, heartbeat_client, register_client, rooms,
-    set_active_source, unregister_client,
+    frequency_for_tone, get_client_list, get_room, heartbeat_client,
+    register_client, rooms, set_active_source, unregister_client,
 )
 from tone import build_tone_preamble
 from tts import generate_robotic_speech, generate_speech
@@ -251,6 +251,12 @@ class UnregisterRequest(BaseModel):
 class ActionSettingRequest(BaseModel):
     setting: str  # "automatic" or "manual"
 
+class FrequencyRequest(BaseModel):
+    value: float
+
+class CommentLengthRequest(BaseModel):
+    value: int
+
 
 @app.get("/room/{code}/api/status")
 async def room_status(code: str):
@@ -262,6 +268,8 @@ async def room_status(code: str):
         "active": room.active,
         "effect": room.current_effect,
         "tone": room.tone_value,
+        "frequency": room.analysis_interval,
+        "comment_length": room.comment_length,
         "description": room.latest_description,
         "description_timestamp": room.description_timestamp,
         "description_type": room.description_type,
@@ -343,8 +351,37 @@ async def room_set_tone(code: str, req: ToneRequest):
     value = max(0.0, min(1.0, req.value))
     room.tone_value = value
     room.tone_preamble = build_tone_preamble(value)
+    # Auto-reset frequency to tone default
+    room.analysis_interval = frequency_for_tone(value)
+    room._frequency_version += 1
     room.touch()
-    log.info(f"[{code}] Tone: {value:.2f}")
+    log.info(f"[{code}] Tone: {value:.2f}, frequency auto-set to {room.analysis_interval}s")
+    return {"value": value}
+
+
+@app.post("/room/{code}/api/frequency")
+async def room_set_frequency(code: str, req: FrequencyRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    value = max(3.0, min(600.0, req.value))
+    room.analysis_interval = value
+    room._frequency_version += 1
+    room.touch()
+    log.info(f"[{code}] Frequency: {value:.0f}s")
+    return {"value": value}
+
+
+@app.post("/room/{code}/api/comment-length")
+async def room_set_comment_length(code: str, req: CommentLengthRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    value = max(3, min(50, req.value))
+    room.comment_length = value
+    room._comment_length_version += 1
+    room.touch()
+    log.info(f"[{code}] Comment length: {value} words")
     return {"value": value}
 
 
@@ -520,6 +557,8 @@ async def _sse_generator(room: Room):
     last_lyrics_time = 0.0
     last_clients_version = -1
     last_action_phase_version = -1
+    last_frequency_version = -1
+    last_comment_length_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -574,6 +613,20 @@ async def _sse_generator(room: Room):
                 "setting": room.action_setting,
                 "phase": room.action_phase,
                 "action": room.action_requested,
+            })))
+
+        freq_version = room._frequency_version
+        if freq_version != last_frequency_version:
+            last_frequency_version = freq_version
+            events.append(("frequency", json.dumps({
+                "value": room.analysis_interval,
+            })))
+
+        cl_version = room._comment_length_version
+        if cl_version != last_comment_length_version:
+            last_comment_length_version = cl_version
+            events.append(("comment_length", json.dumps({
+                "value": room.comment_length,
             })))
 
         # Emit audio events for any new audio files (decoupled from description timing)
@@ -646,8 +699,7 @@ async def room_audio(code: str, audio_id: str):
 async def _analysis_loop(room: Room):
     """Background task: analyze frames from controller, generate TTS, broadcast via SSE."""
     code = room.id
-    interval = config.get("timing", {}).get("analysis_interval", 3)
-    log.info(f"[{code}] Analysis loop started (interval={interval}s)")
+    log.info(f"[{code}] Analysis loop started (dynamic interval, default={room.analysis_interval}s)")
 
     consecutive_failures = 0
     max_failures = 5
@@ -665,7 +717,7 @@ async def _analysis_loop(room: Room):
 
             if room.gemini is None:
                 log.warning(f"[{code}] No Gemini instance, skipping analysis")
-                await asyncio.sleep(interval)
+                await asyncio.sleep(room.analysis_interval)
                 continue
 
             try:
@@ -680,6 +732,7 @@ async def _analysis_loop(room: Room):
                         room.gemini.describe_and_narrate,
                         jpeg_bytes,
                         room.tone_preamble,
+                        room.comment_length,
                     )
                     gemini_time = time.time() - t0
                     log.info(f"[{code}] Gemini describe_and_narrate: {gemini_time:.1f}s -> {'NO_CHANGE' if narration is None else repr(narration[:60])}")
@@ -828,7 +881,7 @@ async def _analysis_loop(room: Room):
 
             # Sleep remaining interval — wake early if action phase changes
             initial_phase = room.action_phase
-            effective_interval = interval
+            effective_interval = room.analysis_interval if room.action_phase == "commenting" else 3
             cycle_elapsed = time.time() - cycle_start
             remaining = effective_interval - cycle_elapsed
             log.info(f"[{code}] Cycle done: total={cycle_elapsed:.1f}s, sleeping={max(0, remaining):.1f}s")

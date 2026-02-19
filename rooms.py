@@ -26,6 +26,15 @@ CLIENT_STALE_SECONDS = 15
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
 
 
+def frequency_for_tone(tone_value: float) -> float:
+    """Return the default analysis interval for a given tone value."""
+    if tone_value <= 0.25:
+        return 10.0
+    if tone_value <= 0.75:
+        return 8.0
+    return 5.0
+
+
 def _generate_code() -> str:
     """Generate a room code like PANOPT-7X3K."""
     chars = string.ascii_uppercase + string.digits
@@ -75,6 +84,12 @@ class Room:
     action_request_time: float = 0.0        # When request was issued (for 30s timeout)
     action_last_comment_time: float = 0.0   # When commenting phase began (for 60s auto-trigger)
     _action_phase_version: int = 0          # Bumped on change, polled by SSE generator
+
+    # Frequency & comment length (runtime-adjustable)
+    analysis_interval: float = 8.0          # seconds between cycles (neutral default)
+    comment_length: int = 10                # target word count
+    _frequency_version: int = 0
+    _comment_length_version: int = 0
 
     # Audio files: timestamp -> mp3 bytes
     audio_files: dict = field(default_factory=dict)

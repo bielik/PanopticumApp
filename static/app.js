@@ -31,6 +31,12 @@
     var effectPills = document.querySelectorAll("#effect-pills .pill-btn");
     var tonePills = document.querySelectorAll("#tone-pills .pill-btn");
 
+    // Slider elements
+    var frequencySlider = document.getElementById("frequency-slider");
+    var frequencyValue = document.getElementById("frequency-value");
+    var commentLengthSlider = document.getElementById("comment-length-slider");
+    var commentLengthValue = document.getElementById("comment-length-value");
+
     // Overlay elements
     var overlayTop = document.querySelector(".overlay-top");
     var camLabel = document.querySelector(".cam-label");
@@ -70,6 +76,8 @@
     var heartbeatTimer = null;
     var currentActionSetting = "manual";
     var currentActionPhase = "commenting";
+    var currentFrequency = 8;
+    var currentCommentLength = 10;
 
     // --- CSS filter map for effects ---
     var EFFECT_FILTERS = {
@@ -675,6 +683,66 @@
     }
 
     // =========================================================================
+    // Frequency slider (logarithmic: 3s – 600s)
+    // =========================================================================
+    function sliderToFrequency(v) {
+        return Math.round(3 * Math.pow(200, v / 100));
+    }
+
+    function frequencyToSlider(f) {
+        return Math.round(100 * Math.log(f / 3) / Math.log(200));
+    }
+
+    function formatFrequency(secs) {
+        if (secs < 60) return secs + "s";
+        var m = Math.floor(secs / 60);
+        var s = secs % 60;
+        return s > 0 ? m + "m " + s + "s" : m + "m";
+    }
+
+    function updateFrequencyLabel(secs) {
+        currentFrequency = secs;
+        if (frequencyValue) frequencyValue.textContent = formatFrequency(secs);
+    }
+
+    if (frequencySlider) {
+        frequencySlider.addEventListener("input", function () {
+            var secs = sliderToFrequency(parseInt(frequencySlider.value, 10));
+            updateFrequencyLabel(secs);
+        });
+        frequencySlider.addEventListener("change", function () {
+            var secs = sliderToFrequency(parseInt(frequencySlider.value, 10));
+            fetch(API + "/frequency", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: secs }),
+            }).catch(function (err) { console.warn("Frequency error:", err); });
+        });
+    }
+
+    // =========================================================================
+    // Comment length slider (linear: 3 – 50 words)
+    // =========================================================================
+    function updateCommentLengthLabel(words) {
+        currentCommentLength = words;
+        if (commentLengthValue) commentLengthValue.textContent = words + " words";
+    }
+
+    if (commentLengthSlider) {
+        commentLengthSlider.addEventListener("input", function () {
+            updateCommentLengthLabel(parseInt(commentLengthSlider.value, 10));
+        });
+        commentLengthSlider.addEventListener("change", function () {
+            var words = parseInt(commentLengthSlider.value, 10);
+            fetch(API + "/comment-length", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: words }),
+            }).catch(function (err) { console.warn("Comment length error:", err); });
+        });
+    }
+
+    // =========================================================================
     // Message log
     // =========================================================================
     function toneLabel(tone) {
@@ -855,6 +923,20 @@
         updateActionPhaseUI(data.phase, data.action);
     });
 
+    evtSource.addEventListener("frequency", function (e) {
+        var data = JSON.parse(e.data);
+        var secs = Math.round(data.value);
+        updateFrequencyLabel(secs);
+        if (frequencySlider) frequencySlider.value = frequencyToSlider(secs);
+    });
+
+    evtSource.addEventListener("comment_length", function (e) {
+        var data = JSON.parse(e.data);
+        var words = data.value;
+        updateCommentLengthLabel(words);
+        if (commentLengthSlider) commentLengthSlider.value = words;
+    });
+
     // Audio events (both modes mark log entries; only worker plays audio)
     evtSource.addEventListener("audio", function (e) {
         var data = JSON.parse(e.data);
@@ -907,6 +989,17 @@
             currentTone = nearest;
 
             if (data.description) addToMessageLog(data.description, data.tone);
+
+            // Frequency & comment length initial state
+            if (data.frequency) {
+                var freqSecs = Math.round(data.frequency);
+                updateFrequencyLabel(freqSecs);
+                if (frequencySlider) frequencySlider.value = frequencyToSlider(freqSecs);
+            }
+            if (data.comment_length) {
+                updateCommentLengthLabel(data.comment_length);
+                if (commentLengthSlider) commentLengthSlider.value = data.comment_length;
+            }
 
             // Action mode initial state
             if (data.action_setting) {

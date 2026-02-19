@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=15">
+    <link rel="stylesheet" href="/static/style.css?v=16">
 </head>
 <body>
     <div class="dashboard">
@@ -59,6 +59,24 @@
                             <button class="pill-btn" data-tone="0">Supportive</button>
                             <button class="pill-btn active" data-tone="0.5">Neutral</button>
                             <button class="pill-btn" data-tone="1">Judgmental</button>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Frequency</span>
+                        <div class="slider-control">
+                            <input type="range" id="frequency-slider" class="range-slider"
+                                   min="0" max="100" step="1" value="19">
+                            <span class="slider-value" id="frequency-value">8s</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Comment Length</span>
+                        <div class="slider-control">
+                            <input type="range" id="comment-length-slider" class="range-slider"
+                                   min="3" max="50" step="1" value="10">
+                            <span class="slider-value" id="comment-length-value">10 words</span>
                         </div>
                     </div>
                 </div>
@@ -118,6 +136,6 @@
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "controller";
     </script>
-    <script src="/static/app.js?v=18"></script>
+    <script src="/static/app.js?v=19"></script>
 </body>
 </html>
