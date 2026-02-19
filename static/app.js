@@ -22,27 +22,40 @@
         var el = document.getElementById("loading-screen");
         if (!el) { if (callback) callback(); return; }
 
-        el.classList.remove("hidden");
+        el.classList.remove("revealing", "revealed");
         el.style.display = "flex";
 
         setTimeout(function () {
-            el.style.display = "none";
             if (window._loadingDrops) clearInterval(window._loadingDrops);
             try { if (window.jQuery) $('#loading-screen').ripples('destroy'); } catch (e) {}
-            if (callback) callback();
+
+            document.body.classList.add("content-blurred");
+            el.style.display = "none";
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    document.body.classList.add("content-revealing");
+                });
+            });
+
+            setTimeout(function () {
+                document.body.classList.remove("content-blurred", "content-revealing");
+                if (callback) callback();
+            }, 4500);
         }, duration);
     }
 
     function hideLoadingScreen() {
         var el = document.getElementById("loading-screen");
         if (!el) return;
-        el.style.display = "none";
         if (window._loadingDrops) clearInterval(window._loadingDrops);
         try { if (window.jQuery) $('#loading-screen').ripples('destroy'); } catch (e) {}
+        el.style.display = "none";
+        document.body.classList.remove("content-blurred", "content-revealing");
     }
 
     // Show loading screen on page load
-    showLoadingScreen(5000);
+    showLoadingScreen(3000);
 
     // --- Elements ---
     var timestampEl = document.getElementById("timestamp");

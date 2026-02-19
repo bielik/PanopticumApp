@@ -64,14 +64,23 @@
             var ls = document.getElementById('loading-screen');
             window._loadingDrops = setInterval(function() {
                 if (ls.style.display === 'none') return;
-                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 20, 0.04);
-            }, 800);
+                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 40, 0.06);
+            }, 1000);
         } catch (e) {}
         setTimeout(function() {
-            el.style.display = "none";
             if (window._loadingDrops) clearInterval(window._loadingDrops);
             try { $('#loading-screen').ripples('destroy'); } catch (e) {}
-        }, 5000);
+            document.body.classList.add("content-blurred");
+            el.style.display = "none";
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    document.body.classList.add("content-revealing");
+                });
+            });
+            setTimeout(function() {
+                document.body.classList.remove("content-blurred", "content-revealing");
+            }, 4500);
+        }, 3000);
     })();
     </script>
 

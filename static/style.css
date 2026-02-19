@@ -1197,9 +1197,15 @@ body.worker-mode .video-container {
     z-index: 1;
 }
 
-.loading-screen.hidden {
-    display: none;
+body.content-blurred > *:not(.loading-screen) {
+    filter: blur(20px);
 }
+
+body.content-revealing > *:not(.loading-screen) {
+    filter: blur(0px);
+    transition: filter 4s ease-out;
+}
+
 
 
 

@@ -87,8 +87,8 @@
             var ls = document.getElementById('loading-screen');
             window._loadingDrops = setInterval(function() {
                 if (ls.style.display === 'none') return;
-                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 20, 0.04);
-            }, 800);
+                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 40, 0.06);
+            }, 1000);
         } catch (e) {
             console.log('Ripples not supported:', e);
         }
