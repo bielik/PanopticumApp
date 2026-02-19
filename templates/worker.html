@@ -54,10 +54,30 @@
         <audio id="audio-robotic-player" preload="none"></audio>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/static/jquery.ripples.js"></script>
     <script>
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "worker";
     </script>
-    <script src="/static/app.js?v=20"></script>
+    <script src="/static/app.js?v=21"></script>
+    <script>
+        try {
+            var c = document.createElement('canvas');
+            c.width = 1; c.height = 1;
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#7a9a86';
+            ctx.fillRect(0, 0, 1, 1);
+            $('#worker-idle-message').ripples({
+                resolution: 512,
+                dropRadius: 20,
+                perturbance: 0.04,
+                interactive: true,
+                imageUrl: c.toDataURL()
+            });
+        } catch (e) {
+            console.log('Ripples not supported:', e);
+        }
+    </script>
 </body>
 </html>

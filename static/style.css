@@ -1020,7 +1020,7 @@ body.worker-mode .video-container {
     overflow: hidden;
 }
 
-/* CRT scanline overlay — disabled for light background */
+/* ::before reserved for ripple plugin canvas */
 .worker-idle-message::before {
     display: none;
 }
