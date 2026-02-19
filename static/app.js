@@ -14,7 +14,46 @@
         CLIENT_ID = crypto.randomUUID();
         sessionStorage.setItem("panopticum_client_id", CLIENT_ID);
     }
-    var CLIENT_LABEL = MODE.charAt(0).toUpperCase() + MODE.slice(1) + " (" + navigator.platform + ")";
+    var STORED_WORKER_ID = sessionStorage.getItem("panopticum_worker_id");
+    var CLIENT_LABEL = STORED_WORKER_ID || (MODE.charAt(0).toUpperCase() + MODE.slice(1) + " (" + navigator.platform + ")");
+
+    // --- Loading screen ---
+    function showLoadingScreen(duration, callback) {
+        var el = document.getElementById("loading-screen");
+        var ring = document.getElementById("loading-ring-fill");
+        var circumference = 226.2; // 2 * PI * 36
+        if (!el) { if (callback) callback(); return; }
+
+        el.classList.remove("hidden");
+        el.style.display = "flex";
+
+        var start = Date.now();
+        var interval = setInterval(function () {
+            var elapsed = Date.now() - start;
+            var pct = Math.min(100, Math.round((elapsed / duration) * 100));
+            if (ring) ring.style.strokeDashoffset = circumference * (1 - pct / 100);
+            if (pct >= 100) {
+                clearInterval(interval);
+                setTimeout(function () {
+                    el.classList.add("hidden");
+                    setTimeout(function () {
+                        el.style.display = "none";
+                        if (callback) callback();
+                    }, 400);
+                }, 200);
+            }
+        }, 50);
+    }
+
+    function hideLoadingScreen() {
+        var el = document.getElementById("loading-screen");
+        if (!el) return;
+        el.classList.add("hidden");
+        setTimeout(function () { el.style.display = "none"; }, 400);
+    }
+
+    // Show loading screen on page load
+    showLoadingScreen(5000);
 
     // --- Elements ---
     var timestampEl = document.getElementById("timestamp");
@@ -52,6 +91,10 @@
     var workerIdleMessage = document.getElementById("worker-idle-message");
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
+    var idleClockEl = document.getElementById("idle-clock");
+    var idleRoomCodeEl = document.getElementById("idle-room-code");
+    var workerIdInput = document.getElementById("worker-id-input");
+    var workerIdBtn = document.getElementById("worker-id-btn");
 
     // Source controls (controller only)
     var sourceStatusEl = document.getElementById("source-status");
@@ -411,18 +454,78 @@
     }
 
     // =========================================================================
+    // Worker idle clock
+    // =========================================================================
+    function updateIdleClock() {
+        if (!idleClockEl) return;
+        var now = new Date();
+        var y = now.getFullYear();
+        var mo = String(now.getMonth() + 1).padStart(2, "0");
+        var d = String(now.getDate()).padStart(2, "0");
+        var h = String(now.getHours()).padStart(2, "0");
+        var mi = String(now.getMinutes()).padStart(2, "0");
+        var s = String(now.getSeconds()).padStart(2, "0");
+        idleClockEl.textContent = y + "-" + mo + "-" + d + "  " + h + ":" + mi + ":" + s;
+    }
+    setInterval(updateIdleClock, 1000);
+    updateIdleClock();
+
+    // Populate room code on idle screen
+    if (idleRoomCodeEl && ROOM) {
+        idleRoomCodeEl.textContent = "Room: " + ROOM;
+    }
+
+    // =========================================================================
+    // Worker ID registration
+    // =========================================================================
+    function registerWorkerId() {
+        if (!workerIdInput) return;
+        var val = workerIdInput.value.trim();
+        if (!val) return;
+        CLIENT_LABEL = val;
+        sessionStorage.setItem("panopticum_worker_id", val);
+        fetch(API + "/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client_id: CLIENT_ID, role: MODE, label: val }),
+        }).then(function () {
+            if (workerIdBtn) {
+                workerIdBtn.textContent = "REGISTERED";
+                setTimeout(function () { workerIdBtn.textContent = "REGISTER"; }, 2000);
+            }
+        }).catch(function (err) {
+            console.warn("Worker ID registration error:", err);
+        });
+    }
+
+    if (workerIdBtn) {
+        workerIdBtn.addEventListener("click", registerWorkerId);
+    }
+    if (workerIdInput) {
+        workerIdInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") registerWorkerId();
+        });
+        // Restore saved ID
+        if (STORED_WORKER_ID) {
+            workerIdInput.value = STORED_WORKER_ID;
+        }
+    }
+
+    // =========================================================================
     // Worker idle state
     // =========================================================================
     function updateWorkerIdleState(active) {
         if (MODE !== "worker") return;
         if (active) {
-            // Session active — hide idle message, show video
-            if (workerIdleMessage) workerIdleMessage.style.display = "none";
-            if (isActiveSource) {
-                if (localVideo) localVideo.style.display = "";
-            } else {
-                showMjpegStream();
-            }
+            // Session active — show loading screen, then reveal video
+            showLoadingScreen(3000, function () {
+                if (workerIdleMessage) workerIdleMessage.style.display = "none";
+                if (isActiveSource) {
+                    if (localVideo) localVideo.style.display = "";
+                } else {
+                    showMjpegStream();
+                }
+            });
         } else {
             // Session stopped — show idle message, hide video
             if (workerIdleMessage) workerIdleMessage.style.display = "flex";

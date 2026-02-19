@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM</title>
-    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body>
+    <div class="loading-screen" id="loading-screen">
+        <img class="loading-animation" src="/static/table-animation.gif?v=3" alt="">
+    </div>
     <div class="lobby">
         <div class="lobby-card">
             <h1 class="lobby-title">PANOPTICUM</h1>
@@ -40,6 +43,27 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function() {
+        var el = document.getElementById("loading-screen");
+        var ring = document.getElementById("loading-ring-fill");
+        var circumference = 226.2;
+        if (!el) return;
+        var start = Date.now(), dur = 5000;
+        var iv = setInterval(function() {
+            var pct = Math.min(100, Math.round(((Date.now() - start) / dur) * 100));
+            if (ring) ring.style.strokeDashoffset = circumference * (1 - pct / 100);
+            if (pct >= 100) {
+                clearInterval(iv);
+                setTimeout(function() {
+                    el.classList.add("hidden");
+                    setTimeout(function() { el.style.display = "none"; }, 400);
+                }, 200);
+            }
+        }, 50);
+    })();
+    </script>
 
     <script>
     (function() {

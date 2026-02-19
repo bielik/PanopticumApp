@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Worker</title>
-    <link rel="stylesheet" href="/static/style.css?v=20">
+    <link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body class="worker-mode">
+    <div class="loading-screen" id="loading-screen">
+        <img class="loading-animation" src="/static/table-animation.gif?v=3" alt="">
+    </div>
     <div class="video-container">
         <img id="worker-stream" src="" alt="Live Feed">
         <video id="local-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:cover;"></video>
@@ -60,7 +63,7 @@
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "worker";
     </script>
-    <script src="/static/app.js?v=21"></script>
+    <script src="/static/app.js?v=22"></script>
     <script>
         try {
             var c = document.createElement('canvas');
