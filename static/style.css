@@ -229,6 +229,7 @@ body {
     gap: 20px;
     flex: 1 1 auto;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .control-group {
@@ -351,6 +352,7 @@ body {
     -webkit-appearance: none;
     appearance: none;
     width: 100px;
+    min-width: 60px;
     height: 6px;
     background: #d1d5db;
     border-radius: 3px;
