@@ -91,6 +91,7 @@
     // Worker-specific elements
     var workerStream = document.getElementById("worker-stream");
     var workerIdleMessage = document.getElementById("worker-idle-message");
+    var workerActiveScreen = document.getElementById("worker-active-screen");
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
     var idleClockEl = document.getElementById("idle-clock");
@@ -192,6 +193,8 @@
     function showMjpegStream() {
         // Don't show stream on worker page when session is not active
         if (MODE === "worker" && !isActive) return;
+        // Worker uses active commentary screen — no video display needed
+        if (MODE === "worker" && workerActiveScreen && workerActiveScreen.style.display !== "none") return;
         if (workerStream && !isActiveSource) {
             workerStream.src = "/room/" + ROOM + "/stream";
             workerStream.style.display = "";
@@ -331,10 +334,7 @@
             stopFrameUpload();
             stopCamera();
             if (localVideo) localVideo.style.display = "none";
-            if (workerStream) {
-                workerStream.style.display = "";
-                workerStream.src = "/room/" + ROOM + "/stream";
-            }
+            showMjpegStream();
         }
     }
 
@@ -519,23 +519,123 @@
     function updateWorkerIdleState(active) {
         if (MODE !== "worker") return;
         if (active) {
-            // Session active — show loading screen, then reveal video
+            // Session active — show loading screen, then reveal active commentary screen
             showLoadingScreen(3000, function () {
                 if (workerIdleMessage) workerIdleMessage.style.display = "none";
-                if (isActiveSource) {
-                    if (localVideo) localVideo.style.display = "";
-                } else {
-                    showMjpegStream();
+                if (workerActiveScreen) {
+                    workerActiveScreen.style.display = "flex";
+                    initActiveScreenRipples();
                 }
+                // Hide MJPEG stream — active screen covers everything visually
+                // localVideo stays visible (behind active screen z-index) so frame capture works
+                if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
+                // Still need frame uploads if we're the source
+                if (isActiveSource && !frameUploadInterval) startFrameUpload();
             });
         } else {
-            // Session stopped — show idle message, hide video
+            // Session stopped — show idle message, hide active screen
+            if (workerActiveScreen) workerActiveScreen.style.display = "none";
+            destroyActiveScreenRipples();
+            clearActiveText();
             if (workerIdleMessage) workerIdleMessage.style.display = "flex";
             if (workerStream) {
                 workerStream.src = "";
                 workerStream.style.display = "none";
             }
             if (localVideo) localVideo.style.display = "none";
+        }
+    }
+
+    // =========================================================================
+    // Active commentary screen — ripples & typewriter
+    // =========================================================================
+    var _activeRipples = null;
+
+    function initActiveScreenRipples() {
+        if (_activeRipples) return;
+        try {
+            if (!window.jQuery) return;
+            var c = document.createElement("canvas");
+            c.width = 1; c.height = 1;
+            var ctx = c.getContext("2d");
+            ctx.fillStyle = "#7a9a86";
+            ctx.fillRect(0, 0, 1, 1);
+            var rUrl = c.toDataURL();
+            $("#worker-active-screen").ripples({
+                resolution: 512,
+                dropRadius: 20,
+                perturbance: 0.04,
+                interactive: true,
+                imageUrl: rUrl
+            });
+            var el = document.getElementById("worker-active-screen");
+            _activeRipples = setInterval(function () {
+                if (!el || el.style.display === "none") return;
+                $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 40, 0.06);
+            }, 1000);
+        } catch (e) {
+            console.log("Active screen ripples not supported:", e);
+        }
+    }
+
+    function destroyActiveScreenRipples() {
+        if (_activeRipples) {
+            clearInterval(_activeRipples);
+            _activeRipples = null;
+        }
+        try { if (window.jQuery) $("#worker-active-screen").ripples("destroy"); } catch (e) {}
+    }
+
+    var _activeWordTimer = null;
+
+    function updateActiveText(text) {
+        var el = document.getElementById("active-text");
+        if (!el) return;
+        if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
+
+        el.textContent = "";
+        el.classList.add("typing");
+
+        var words = text.split(/\s+/).filter(function (w) { return w.length > 0; });
+        var wi = 0;
+
+        function typeWord() {
+            if (wi >= words.length) {
+                el.classList.remove("typing");
+                return;
+            }
+            var word = words[wi];
+            var ci = 0;
+            el.textContent = "";
+
+            function typeChar() {
+                if (ci < word.length) {
+                    el.textContent += word[ci];
+                    ci++;
+                    _activeWordTimer = setTimeout(typeChar, 60);
+                } else {
+                    wi++;
+                    if (wi < words.length) {
+                        _activeWordTimer = setTimeout(function () {
+                            typeWord();
+                        }, 500);
+                    } else {
+                        // Last word — keep visible, stop cursor blink
+                        el.classList.remove("typing");
+                    }
+                }
+            }
+            typeChar();
+        }
+        typeWord();
+    }
+
+    function clearActiveText() {
+        if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
+        var el = document.getElementById("active-text");
+        if (el) {
+            el.textContent = "";
+            el.classList.remove("typing");
         }
     }
 
@@ -990,7 +1090,13 @@
 
     evtSource.addEventListener("description", function (e) {
         var data = JSON.parse(e.data);
-        if (data.text) addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null, data.type || "commentary");
+        if (data.text) {
+            addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null, data.type || "commentary");
+            // Feed text to active commentary screen typewriter
+            if (MODE === "worker" && workerActiveScreen && workerActiveScreen.style.display !== "none") {
+                updateActiveText(data.text);
+            }
+        }
     });
 
     evtSource.addEventListener("effect", function (e) {

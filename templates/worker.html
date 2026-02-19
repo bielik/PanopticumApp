@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Worker</title>
-    <link rel="stylesheet" href="/static/style.css?v=21">
+    <link rel="stylesheet" href="/static/style.css?v=22">
 </head>
 <body class="worker-mode">
     <div class="loading-screen" id="loading-screen"></div>
@@ -34,6 +34,13 @@
             <div class="motivational-message" id="motivational-message"><span class="motivational-message-text" id="motivational-text"></span></div>
         </div>
 
+        <!-- Worker active commentary screen -->
+        <div class="worker-active-screen" id="worker-active-screen" style="display:none">
+            <div class="active-circle" id="active-circle">
+                <span class="active-text" id="active-text"></span>
+            </div>
+        </div>
+
         <!-- Worker idle screen (Lumon theme) -->
         <div class="worker-idle-message" id="worker-idle-message">
             <p class="worker-idle-slogan">Your productivity<br>is our priority.</p>
@@ -61,7 +68,7 @@
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "worker";
     </script>
-    <script src="/static/app.js?v=22"></script>
+    <script src="/static/app.js?v=23"></script>
     <script>
         try {
             var c = document.createElement('canvas');
