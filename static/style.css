@@ -31,12 +31,14 @@ body {
     flex-direction: column;
     min-width: 0;
     gap: 20px;
+    overflow-y: auto;
 }
 
 /* --- Video container --- */
 .video-container {
     position: relative;
     flex: 1;
+    min-height: 300px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -225,11 +227,16 @@ body {
 
 .controls-center {
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1 1 auto;
+}
+
+.controls-row {
+    display: flex;
     align-items: flex-end;
     gap: 20px;
-    flex: 1 1 auto;
-    justify-content: center;
-    flex-wrap: wrap;
 }
 
 .control-group {
@@ -907,15 +914,13 @@ body.worker-mode .action-panel {
 @media (max-width: 1000px) {
     .controls {
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         padding: 20px 24px;
         gap: 16px;
     }
 
     .controls-center {
         width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
         gap: 12px;
     }
 

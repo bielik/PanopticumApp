@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=17">
+    <link rel="stylesheet" href="/static/style.css?v=18">
 </head>
 <body>
     <div class="dashboard">
@@ -36,21 +36,23 @@
                 <a href="/room/{{ room_code }}/worker" target="_blank" class="worker-link">Worker &#8599;</a>
 
                 <div class="controls-center">
-                    <div class="control-group">
-                        <span class="control-label">Effect</span>
-                        <div class="pill-group" id="effect-pills">
-                            <button class="pill-btn" data-effect="insta">Insta</button>
-                            <button class="pill-btn active" data-effect="natural">Natural</button>
-                            <button class="pill-btn" data-effect="cctv">CCTV</button>
+                    <div class="controls-row">
+                        <div class="control-group">
+                            <span class="control-label">Effect</span>
+                            <div class="pill-group" id="effect-pills">
+                                <button class="pill-btn" data-effect="insta">Insta</button>
+                                <button class="pill-btn active" data-effect="natural">Natural</button>
+                                <button class="pill-btn" data-effect="cctv">CCTV</button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="sync-toggle">
-                        <label class="sync-label" for="sync-checkbox">
-                            <input type="checkbox" id="sync-checkbox" checked>
-                            <span class="sync-switch"></span>
-                            <span class="sync-text">Sync</span>
-                        </label>
+                        <div class="sync-toggle">
+                            <label class="sync-label" for="sync-checkbox">
+                                <input type="checkbox" id="sync-checkbox" checked>
+                                <span class="sync-switch"></span>
+                                <span class="sync-text">Sync</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="control-group">
