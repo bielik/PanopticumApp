@@ -78,50 +78,20 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 
 ### CSS (`static/style.css`)
 
-#### Visual Design — Lumon Industries (Severance)
+See **[`UI-GUIDE.md`](UI-GUIDE.md)** for the comprehensive visual design system (colors, typography, components, page templates).
 
-**Aesthetic**: Retro-corporate CRT terminal. Inspired by the Macrodata Refinement desktop UI from Severance. Think early computer graphics — simple lines, thin outlined boxes, subtle phosphor glow effects. Sterile, clinical, eerily calm. Nothing looks "modern web" — it looks like a 1980s corporate mainframe terminal rendered in a browser.
+Key points:
+- All colors defined as CSS custom properties on `:root` — no hardcoded hex
+- Two typefaces: Inter (headings, weight 700) + Share Tech Mono (everything else)
+- Max 2 font sizes per page: one Display heading + 0.85rem body
+- Background: `--lumon-sage` (`#7a9a86`) for public pages, `--lumon-dark` for controller
+- Accent: `--lumon-green-deep` (`#213525`) for interactive elements on light backgrounds
+- Custom circle cursor (`--lumon-dark`) on idle/lobby screens
+- Vignette overlay on sage backgrounds
+- WebGL ripple effect on worker idle screen (`jquery.ripples.js` + jQuery)
+- Video overlay effects (CCTV neon green, Insta sepia) are artistic exceptions to the color rules
 
-**Reference images** in `References/` folder: Lumon UI.jpg (MDR number grid), Lumon UI_2.jpg (blue glow variant), Lumon Logo.jpg (CRT idle screen), Lumon Corporate Identity*.jpg, Color scheme 2.jpg.
-
-#### Color Scheme
-
-Define as CSS custom properties on `:root`. Use these tokens everywhere — no hardcoded hex values.
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--lumon-dark` | `#161E26` | Page backgrounds, dark surfaces, video container bg |
-| `--lumon-green-deep` | `#213525` | Secondary accent — borders, hover states, panel backgrounds |
-| `--lumon-green` | `#8DB07A` | Primary interactive — active buttons, slider thumbs, progress bars, active indicators |
-| `--lumon-light` | `#E4E7E5` | Text on dark backgrounds, panel surfaces in light mode, card fills |
-| `--lumon-glow` | `rgba(141, 176, 122, 0.4)` | Glow/box-shadow color for green elements (sage green at 40% opacity) |
-
-#### Typography
-- **Single typeface**: Inter (Google Fonts) for everything — UI, labels, overlays, headings
-- No serif fonts, no monospace (except raw data displays if needed)
-- **Labels**: uppercase, weight 600, letter-spacing 2px, small size (~0.65rem)
-- **Body text**: weight 400-500, normal case
-- **Headings/titles**: weight 700, uppercase, wide letter-spacing
-
-#### UI Principles
-- **Outlined boxes, not filled cards** — 1px solid borders (`--lumon-green` or `--lumon-green-deep`), transparent or very subtle fill
-- **Sharp corners** — no border-radius or minimal (2-4px max). Rectangles, not pills.
-- **Glow effects** — active/interactive elements get subtle `box-shadow: 0 0 8px var(--lumon-glow)` and `text-shadow: 0 0 6px var(--lumon-glow)`
-- **Dark backgrounds** — controller page uses `--lumon-dark` as body background. Panels are outlined containers, not white cards.
-- **Text color**: `--lumon-light` for primary text on dark backgrounds. `--lumon-green` for labels, active states, highlights.
-- **Buttons**: outlined style (border only, no fill) in default state. Fill with `--lumon-green-deep` or `--lumon-green` on hover/active. Uppercase text.
-- **Sliders/inputs**: thin track in `--lumon-green-deep`, thumb in `--lumon-green` with glow
-- **Dividers**: 1px lines in `--lumon-green-deep`
-
-#### Worker Mode
-- **Idle screen**: sage green (`#7a9a86`) background with vignette overlay. Content centered vertically: large Inter heading ("Your productivity is our priority."), Share Tech Mono clock + input/button + status text (all `0.85rem`), Panopticum SVG logo at bottom with white glow. Typewriter animation on status text. WebGL water ripple effect via `jquery.ripples.js` (jQuery plugin) — interactive on mouse move, auto-rain when idle. Background color passed as 1x1 canvas data URL since plugin requires an image. Cursor visible on idle screen (overrides `body.worker-mode { cursor: none }`).
-- **Active**: fullscreen video, hidden cursor, dark borders
-
-#### Lobby Page
-- Dark background (`--lumon-dark`)
-- Centered card with thin `--lumon-green` border outline
-- Input fields: outlined, not filled
-- Submit buttons: `--lumon-green-deep` fill with `--lumon-light` text
+**Reference images** in `References/` folder.
 
 - Mobile responsive with breakpoints at 1200px, 1000px, 850px
 - Worker mode (`body.worker-mode`) hides all controls, fullscreen video, hidden cursor
