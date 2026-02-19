@@ -1051,8 +1051,11 @@ body.worker-mode .video-container {
 }
 
 .worker-idle-logo {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 160px;
-    margin-top: clamp(40px, 15vh, 200px);
 }
 
 .worker-idle-logo svg {
@@ -1186,22 +1189,39 @@ body.worker-mode .video-container {
 }
 
 .active-circle {
-    width: 160px;
-    height: 160px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
-    background: var(--lumon-dark);
+    background: #161E26;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
     position: relative;
     z-index: 3;
-    animation: circle-pulse 1s ease-in-out infinite;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    animation: circle-pulse 2s ease-in-out infinite;
+}
+
+.active-logo {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    z-index: 2;
+}
+
+.active-logo svg {
+    width: 100%;
+    height: auto;
+    fill: #fff;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
 }
 
 @keyframes circle-pulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.03); }
+    50% { transform: scale(1.12); }
 }
 
 .active-text {

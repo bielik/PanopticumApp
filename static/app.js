@@ -569,7 +569,7 @@
                 _activeRipples = setInterval(function () {
                     if (!el || el.style.display === "none") return;
                     $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 30, 0.3);
-                }, 1000);
+                }, 2000);
             } catch (e) {
                 console.log("Active screen ripples not supported:", e);
             }
