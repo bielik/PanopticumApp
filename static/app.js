@@ -549,29 +549,31 @@
 
     function initActiveScreenRipples() {
         if (_activeRipples) return;
-        try {
-            if (!window.jQuery) return;
-            var c = document.createElement("canvas");
-            c.width = 1; c.height = 1;
-            var ctx = c.getContext("2d");
-            ctx.fillStyle = "#7a9a86";
-            ctx.fillRect(0, 0, 1, 1);
-            var rUrl = c.toDataURL();
-            $("#worker-active-screen").ripples({
-                resolution: 512,
-                dropRadius: 40,
-                perturbance: 0.06,
-                interactive: true,
-                imageUrl: rUrl
-            });
-            var el = document.getElementById("worker-active-screen");
-            _activeRipples = setInterval(function () {
-                if (!el || el.style.display === "none") return;
-                $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 80, 0.08);
-            }, 1000);
-        } catch (e) {
-            console.log("Active screen ripples not supported:", e);
-        }
+        setTimeout(function () {
+            try {
+                if (!window.jQuery) return;
+                var el = document.getElementById("worker-active-screen");
+                if (!el || !el.clientWidth) return;
+                var c = document.createElement("canvas");
+                c.width = 1; c.height = 1;
+                var ctx = c.getContext("2d");
+                ctx.fillStyle = "#7a9a86";
+                ctx.fillRect(0, 0, 1, 1);
+                $("#worker-active-screen").ripples({
+                    resolution: 512,
+                    dropRadius: 60,
+                    perturbance: 0.08,
+                    interactive: true,
+                    imageUrl: c.toDataURL()
+                });
+                _activeRipples = setInterval(function () {
+                    if (!el || el.style.display === "none") return;
+                    $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 30, 0.3);
+                }, 1000);
+            } catch (e) {
+                console.log("Active screen ripples not supported:", e);
+            }
+        }, 100);
     }
 
     function destroyActiveScreenRipples() {
