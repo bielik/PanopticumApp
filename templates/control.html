@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=22">
+    <link rel="stylesheet" href="/static/style.css?v=24">
 </head>
 <body>
     <div class="loading-screen" id="loading-screen"></div>
@@ -134,34 +134,12 @@
         <button class="log-expand-btn" id="log-expand-btn" title="Show activity log">&#9776;</button>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="/static/jquery.ripples.js"></script>
     <script>
-        try {
-            var c = document.createElement('canvas');
-            c.width = 1; c.height = 1;
-            var ctx = c.getContext('2d');
-            ctx.fillStyle = '#7a9a86';
-            ctx.fillRect(0, 0, 1, 1);
-            $('#loading-screen').ripples({
-                resolution: 512,
-                dropRadius: 20,
-                perturbance: 0.04,
-                interactive: false,
-                imageUrl: c.toDataURL()
-            });
-            var ls = document.getElementById('loading-screen');
-            window._loadingDrops = setInterval(function() {
-                if (ls.style.display === 'none') return;
-                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 40, 0.06);
-            }, 1000);
-        } catch (e) {}
-    </script>
-    <script>
-        // Room code injected by server
         window.ROOM_CODE = "{{ room_code }}";
         window.PAGE_MODE = "controller";
     </script>
-    <script src="/static/app.js?v=23"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/static/jquery.ripples.js"></script>
+    <script src="/static/app.js?v=25"></script>
 </body>
 </html>

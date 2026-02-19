@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM</title>
-    <link rel="stylesheet" href="/static/style.css?v=21">
+    <link rel="stylesheet" href="/static/style.css?v=24">
 </head>
 <body>
     <div class="loading-screen" id="loading-screen"></div>
@@ -47,40 +47,7 @@
     <script>
     (function() {
         var el = document.getElementById("loading-screen");
-        if (!el) return;
-        try {
-            var c = document.createElement('canvas');
-            c.width = 1; c.height = 1;
-            var ctx = c.getContext('2d');
-            ctx.fillStyle = '#7a9a86';
-            ctx.fillRect(0, 0, 1, 1);
-            $('#loading-screen').ripples({
-                resolution: 512,
-                dropRadius: 20,
-                perturbance: 0.04,
-                interactive: false,
-                imageUrl: c.toDataURL()
-            });
-            var ls = document.getElementById('loading-screen');
-            window._loadingDrops = setInterval(function() {
-                if (ls.style.display === 'none') return;
-                $('#loading-screen').ripples('drop', ls.clientWidth / 2, ls.clientHeight / 2, 40, 0.06);
-            }, 1000);
-        } catch (e) {}
-        setTimeout(function() {
-            if (window._loadingDrops) clearInterval(window._loadingDrops);
-            try { $('#loading-screen').ripples('destroy'); } catch (e) {}
-            document.body.classList.add("content-blurred");
-            el.style.display = "none";
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    document.body.classList.add("content-revealing");
-                });
-            });
-            setTimeout(function() {
-                document.body.classList.remove("content-blurred", "content-revealing");
-            }, 4500);
-        }, 3000);
+        if (el) el.style.display = "none";
     })();
     </script>
 

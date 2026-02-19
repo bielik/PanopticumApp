@@ -54,8 +54,8 @@
         document.body.classList.remove("content-blurred", "content-revealing");
     }
 
-    // Show loading screen on page load
-    showLoadingScreen(3000);
+    // Skip loading screen — hide immediately
+    hideLoadingScreen();
 
     // --- Elements ---
     var timestampEl = document.getElementById("timestamp");
@@ -451,8 +451,8 @@
     // Worker mode setup
     // =========================================================================
     function setupWorker() {
-        if (MODE !== "worker" || !workerStream) return;
-        // Don't start the MJPEG stream — show idle message until session becomes active
+        if (MODE !== "worker") return;
+        // Idle message is shown by default; active screen shown when SSE active event fires
     }
 
     // =========================================================================
@@ -519,19 +519,15 @@
     function updateWorkerIdleState(active) {
         if (MODE !== "worker") return;
         if (active) {
-            // Session active — show loading screen, then reveal active commentary screen
-            showLoadingScreen(3000, function () {
-                if (workerIdleMessage) workerIdleMessage.style.display = "none";
-                if (workerActiveScreen) {
-                    workerActiveScreen.style.display = "flex";
-                    initActiveScreenRipples();
-                }
-                // Hide MJPEG stream — active screen covers everything visually
-                // localVideo stays visible (behind active screen z-index) so frame capture works
-                if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
-                // Still need frame uploads if we're the source
-                if (isActiveSource && !frameUploadInterval) startFrameUpload();
-            });
+            // Session active — show active commentary screen immediately
+            hideLoadingScreen();
+            if (workerIdleMessage) workerIdleMessage.style.display = "none";
+            if (workerActiveScreen) {
+                workerActiveScreen.style.display = "flex";
+                initActiveScreenRipples();
+            }
+            if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
+            if (isActiveSource && !frameUploadInterval) startFrameUpload();
         } else {
             // Session stopped — show idle message, hide active screen
             if (workerActiveScreen) workerActiveScreen.style.display = "none";
@@ -563,15 +559,15 @@
             var rUrl = c.toDataURL();
             $("#worker-active-screen").ripples({
                 resolution: 512,
-                dropRadius: 20,
-                perturbance: 0.04,
+                dropRadius: 40,
+                perturbance: 0.06,
                 interactive: true,
                 imageUrl: rUrl
             });
             var el = document.getElementById("worker-active-screen");
             _activeRipples = setInterval(function () {
                 if (!el || el.style.display === "none") return;
-                $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 40, 0.06);
+                $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 80, 0.08);
             }, 1000);
         } catch (e) {
             console.log("Active screen ripples not supported:", e);
