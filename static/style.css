@@ -985,16 +985,22 @@ body.controller-mode::before {
     border: 1px solid rgba(255, 255, 255, 0.3);
     background: #404d5b;
     box-shadow: inset 4px 8px 40px rgba(0, 0, 0, 0.35);
+    transition: width 0.6s ease, height 0.6s ease;
 }
 
 .ctrl-circle.active {
-    animation: none;
-    width: 440px;
-    height: 440px;
+    width: 200px;
+    height: 200px;
     background: #404d5b;
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: inset 4px 8px 40px rgba(0, 0, 0, 0.35);
     isolation: isolate;
+    animation: ctrl-circle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ctrl-circle-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.12); }
 }
 
 
@@ -1070,11 +1076,11 @@ body.controller-mode::before {
 
 .ctrl-divider-v-top {
     top: 95px;
-    bottom: calc(50% + 160px);
+    bottom: 50%;
 }
 
 .ctrl-divider-v-bottom {
-    top: calc(50% + 160px);
+    top: 50%;
     bottom: 145px;
 }
 
@@ -1089,11 +1095,11 @@ body.controller-mode::before {
 
 .ctrl-divider-h-left {
     left: 21px;
-    right: calc(50% + 160px);
+    right: 50%;
 }
 
 .ctrl-divider-h-right {
-    left: calc(50% + 160px);
+    left: 50%;
     right: 21px;
 }
 

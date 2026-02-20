@@ -1047,6 +1047,7 @@
 
     evtSource.addEventListener("active", function (e) {
         var data = JSON.parse(e.data);
+        var wasActive = isActive;
         updateStartStopButton(data.active);
         updateWorkerIdleState(data.active);
 
@@ -1063,6 +1064,12 @@
                 if (_streamCanvas && _streamCtx) {
                     _streamCtx.clearRect(0, 0, _streamCanvas.width, _streamCanvas.height);
                     _streamCanvas.style.display = "none";
+                }
+                // Retype slogan after circle finishes resizing (only on actual deactivation)
+                if (wasActive) {
+                    var statusEl = document.getElementById("ctrl-circle-status");
+                    if (statusEl) statusEl.textContent = "";
+                    setTimeout(typeCtrlSlogan, 650);
                 }
             }
         }
@@ -1240,20 +1247,25 @@
     }
 
     // Controller circle typewriter
-    if (MODE === "controller") {
-        (function () {
-            var el = document.getElementById("ctrl-circle-status");
-            if (!el) return;
-            var text = "Oversight is care.";
-            var i = 0;
-            function typeNext() {
-                if (i < text.length && !el.classList.contains("hidden")) {
-                    el.textContent += text[i];
-                    i++;
-                    setTimeout(typeNext, 60);
-                }
+    var _ctrlSloganVersion = 0;
+    function typeCtrlSlogan() {
+        var el = document.getElementById("ctrl-circle-status");
+        if (!el) return;
+        el.textContent = "";
+        var version = ++_ctrlSloganVersion;
+        var text = "Oversight is care.";
+        var i = 0;
+        function typeNext() {
+            if (version !== _ctrlSloganVersion) return;
+            if (i < text.length) {
+                el.textContent += text[i];
+                i++;
+                setTimeout(typeNext, 60);
             }
-            setTimeout(typeNext, 500);
-        })();
+        }
+        setTimeout(typeNext, 500);
+    }
+    if (MODE === "controller") {
+        typeCtrlSlogan();
     }
 })();
