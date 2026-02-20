@@ -456,6 +456,11 @@
             if (lineIdx >= lines.length) {
                 var idBox = document.querySelector(".worker-idle-id");
                 if (idBox) idBox.classList.add("visible");
+                var statusText = document.getElementById("worker-idle-status-text");
+                if (statusText) {
+                    statusText.style.display = "";
+                    statusText.classList.add("visible");
+                }
                 return;
             }
             if (charIdx < lines[lineIdx].length) {

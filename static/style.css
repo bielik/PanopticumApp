@@ -1442,10 +1442,6 @@ body.controller-mode .worker-info { top: 62px; }
 }
 
 
-.worker-idle-room {
-    display: none;
-}
-
 .worker-idle-id {
     display: flex;
     align-items: center;
@@ -1459,10 +1455,6 @@ body.controller-mode .worker-info { top: 62px; }
 
 .worker-idle-id.visible {
     opacity: 1;
-}
-
-.worker-idle-id label {
-    display: none;
 }
 
 .worker-idle-id input {
@@ -1511,19 +1503,19 @@ body.controller-mode .worker-info { top: 62px; }
 }
 
 .worker-idle-status {
-    position: fixed;
-    top: 125px;
-    left: 0;
-    right: 0;
-    margin: 0 auto;
     text-align: center;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
-    color: #fff;
+    color: var(--lumon-dark);
     letter-spacing: 3px;
     text-transform: uppercase;
-    z-index: 25;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease-in;
+}
+
+.worker-idle-status.visible {
+    opacity: 1;
     animation: idle-blink 3s ease-in-out infinite;
 }
 
