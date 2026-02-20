@@ -960,6 +960,15 @@ body.controller-mode::before {
     z-index: 9999;
 }
 
+/* Logo: fixed at bottom since it lives outside ctrl-screen */
+body.controller-mode .active-logo {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+}
+
 .ctrl-screen {
     position: relative;
     width: 100vw;
@@ -1385,6 +1394,11 @@ body.controller-mode::before {
 
 /* --- Controller responsive: stack quadrants vertically on small screens --- */
 @media (max-width: 899px), (max-height: 899px) {
+    /* Match body background to ctrl-screen so no green bleeds through */
+    body.controller-mode {
+        background: #2e3f4b;
+    }
+
     /* Hide decorative elements */
     .ctrl-circle {
         display: none;
@@ -1397,15 +1411,33 @@ body.controller-mode::before {
         display: none;
     }
 
-    /* Convert screen to scrollable flex column */
-    .ctrl-screen {
-        height: auto;
-        min-height: 100vh;
-        overflow: visible;
-        padding: 90px 40px 40px;
+    /* Scroll wrapper: fixed between header and logo, clips content */
+    .ctrl-scroll-wrap {
+        position: fixed;
+        top: 90px;
+        bottom: 100px;
+        left: 40px;
+        right: 40px;
+        overflow-y: auto;
+        overflow-x: hidden;
         display: flex;
         flex-direction: column;
         gap: 24px;
+        z-index: 30;
+    }
+
+    /* Thin scrollbar matching activity log style */
+    .ctrl-scroll-wrap::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .ctrl-scroll-wrap::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .ctrl-scroll-wrap::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 0;
     }
 
     /* Stack quadrants as flow elements */
@@ -1432,22 +1464,14 @@ body.controller-mode::before {
         text-align: left;
     }
 
-    /* Activity log: let it flow but cap height */
+    /* Activity log: expand fully in single scroll */
     .ctrl-q2 {
         overflow: visible;
     }
 
     .ctrl-q2 .message-log-list {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-
-    /* Logo: static centered at top */
-    .active-logo {
-        position: static;
-        transform: none;
-        margin: 0 auto 20px;
+        max-height: none;
+        overflow-y: visible;
     }
 }
 
