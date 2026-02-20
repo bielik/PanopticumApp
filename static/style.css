@@ -1415,7 +1415,7 @@ body.controller-mode .active-logo {
     .ctrl-scroll-wrap {
         position: fixed;
         top: 90px;
-        bottom: 100px;
+        bottom: 150px;
         left: 40px;
         right: 40px;
         overflow-y: auto;
