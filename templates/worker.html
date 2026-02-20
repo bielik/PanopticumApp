@@ -11,6 +11,9 @@
     <video id="local-video" autoplay playsinline muted style="display:none"></video>
     <canvas id="capture-canvas" style="display:none"></canvas>
 
+    <!-- Fixed clock visible in both idle and active modes -->
+    <div class="worker-clock" id="worker-clock"></div>
+
     <!-- Worker active commentary screen -->
     <div class="worker-active-screen" id="worker-active-screen" style="display:none">
         <div class="active-logo">
@@ -24,7 +27,6 @@
     <!-- Worker idle screen (Lumon theme) -->
     <div class="worker-idle-message" id="worker-idle-message" style="display:none">
         <p class="worker-idle-slogan">Your productivity<br>is our priority.</p>
-        <div class="worker-idle-clock"><span id="idle-clock"></span></div>
         <p class="worker-idle-room" id="idle-room-code"></p>
         <div class="worker-idle-id">
             <label>Worker Identification</label>

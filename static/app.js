@@ -94,7 +94,7 @@
     var workerActiveScreen = document.getElementById("worker-active-screen");
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
-    var idleClockEl = document.getElementById("idle-clock");
+    var idleClockEl = document.getElementById("worker-clock");
     var idleRoomCodeEl = document.getElementById("idle-room-code");
     var workerIdInput = document.getElementById("worker-id-input");
     var workerIdBtn = document.getElementById("worker-id-btn");
