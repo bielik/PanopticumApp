@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=32">
+    <link rel="stylesheet" href="/static/style.css?v=42">
 </head>
 <body class="controller-mode">
-    <!-- Hidden capture elements -->
-    <video id="local-video" autoplay playsinline muted style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
-    <canvas id="capture-canvas" style="display:none"></canvas>
-
-    <!-- Fixed clock -->
+    <!-- Fixed clock + info -->
     <div class="worker-clock" id="worker-clock"></div>
+    <div class="worker-info" id="worker-info"></div>
 
     <!-- Controller screen -->
     <div class="ctrl-screen" id="ctrl-screen">
@@ -23,9 +20,7 @@
 
         <!-- Circle with live video -->
         <div class="ctrl-circle" id="ctrl-circle">
-            <video id="ctrl-video" autoplay playsinline muted></video>
-            <canvas id="ctrl-canvas" width="80" height="80"></canvas>
-            <img id="worker-stream" src="" alt="" style="display:none">
+            <canvas id="worker-stream-canvas" width="320" height="320" style="display:none"></canvas>
         </div>
 
         <!-- Cross dividers -->
@@ -95,9 +90,6 @@
             </div>
             <span class="ctrl-label">Connected Devices</span>
             <div id="client-list" class="client-list"></div>
-            <div id="camera-select-wrap" class="camera-select-wrap" style="display:none">
-                <select id="camera-select" class="camera-select"></select>
-            </div>
         </div>
     </div>
 
@@ -107,7 +99,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=33"></script>
+    <script src="/static/app.js?v=42"></script>
     <script>
         try {
             var c = document.createElement('canvas');
@@ -122,6 +114,14 @@
                 interactive: true,
                 imageUrl: c.toDataURL()
             });
+            // Wave generator from below the circle
+            setInterval(function () {
+                var el = document.getElementById('ctrl-screen');
+                if (!el || !el.clientWidth) return;
+                var cx = el.clientWidth / 2;
+                var cy = el.clientHeight / 2;
+                $('#ctrl-screen').ripples('drop', cx, cy, 40, 0.6);
+            }, 2000);
         } catch (e) {
             console.log('Ripples not supported:', e);
         }

@@ -72,31 +72,28 @@
     var commentLengthSlider = document.getElementById("comment-length-slider");
     var commentLengthValue = document.getElementById("comment-length-value");
 
-    // Camera elements (both controller and worker)
+    // Camera elements (worker only — controller no longer captures video)
     var localVideo = document.getElementById("local-video");
     var captureCanvas = document.getElementById("capture-canvas");
 
-    // Controller video circle
-    var ctrlVideo = document.getElementById("ctrl-video");
-    var ctrlCanvas = document.getElementById("ctrl-canvas");
-    var ctrlCanvasCtx = ctrlCanvas ? ctrlCanvas.getContext("2d") : null;
-    var ctrlCanvasRAF = null;
-
-    // Worker-specific elements
-    var workerStream = document.getElementById("worker-stream");
+    // Video display
+    var workerStream = document.getElementById("worker-stream") || document.getElementById("worker-stream-canvas");
+    var _streamCanvas = document.getElementById("worker-stream-canvas");
+    var _streamCtx = _streamCanvas ? _streamCanvas.getContext("2d") : null;
+    var _pixelCanvas = null;  // tiny offscreen canvas for pixelation
+    var _pixelCtx = null;
+    var PIXEL_SIZE = 80;      // render at 80x80 then upscale → visible but recognizable pixels
+    var POSTERIZE_LEVELS = 8; // number of brightness levels
     var workerIdleMessage = document.getElementById("worker-idle-message");
     var workerActiveScreen = document.getElementById("worker-active-screen");
     var audioPlayer = document.getElementById("audio-player");
     var audioRoboticPlayer = document.getElementById("audio-robotic-player");
     var idleClockEl = document.getElementById("worker-clock");
+    var workerInfoEl = document.getElementById("worker-info");
     var idleRoomCodeEl = document.getElementById("idle-room-code");
     var workerIdInput = document.getElementById("worker-id-input");
     var workerIdBtn = document.getElementById("worker-id-btn");
 
-    // Source controls (controller only)
-    var sourceStatusEl = document.getElementById("source-status");
-    var cameraSelectWrap = document.getElementById("camera-select-wrap");
-    var cameraSelect = document.getElementById("camera-select");
     var clientListEl = document.getElementById("client-list");
 
     // Action mode elements
@@ -116,6 +113,7 @@
     var currentActionPhase = "commenting";
     var currentFrequency = 8;
     var currentCommentLength = 10;
+    var _mjpegRetryTimer = null;
 
     // --- Message log ---
     var messageLog = [];
@@ -130,13 +128,19 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ client_id: CLIENT_ID, role: MODE, label: CLIENT_LABEL }),
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            if (r.status === 409) {
+                // Room occupied — worker rejected
+                handleWorkerRejection();
+                return null;
+            }
+            return r.json();
+        })
         .then(function (data) {
-            if (data.is_source) {
-                handleSourceChange(true);
-            } else {
-                // Not the source — show MJPEG stream (deferred to avoid broken image flash)
-                showMjpegStream();
+            if (!data) return;
+            if (MODE === "worker") {
+                // Worker is always the video source
+                isActiveSource = true;
             }
             if (data.clients) {
                 renderClientList(data.clients);
@@ -147,17 +151,60 @@
         });
     }
 
-    function showMjpegStream() {
-        // Don't show stream on worker page when session is not active
-        if (MODE === "worker" && !isActive) return;
-        // Worker uses active commentary screen — no video display needed
-        if (MODE === "worker" && workerActiveScreen && workerActiveScreen.style.display !== "none") return;
-        if (workerStream && !isActiveSource) {
-            workerStream.src = "/room/" + ROOM + "/stream";
-            workerStream.style.display = "";
+    function processAndDrawFrame(img) {
+        if (!_streamCanvas || !_streamCtx) return;
+
+        // Lazy-init tiny offscreen canvas
+        if (!_pixelCanvas) {
+            _pixelCanvas = document.createElement("canvas");
+            _pixelCanvas.width = PIXEL_SIZE;
+            _pixelCanvas.height = PIXEL_SIZE;
+            _pixelCtx = _pixelCanvas.getContext("2d");
         }
-        if (ctrlVideo) {
-            ctrlVideo.style.display = "none";
+
+        // Center-crop source to square, then draw into tiny canvas (downscale → pixelation)
+        var sw = img.naturalWidth;
+        var sh = img.naturalHeight;
+        var side = Math.min(sw, sh);
+        var sx = (sw - side) / 2;
+        var sy = (sh - side) / 2;
+        _pixelCtx.drawImage(img, sx, sy, side, side, 0, 0, PIXEL_SIZE, PIXEL_SIZE);
+
+        // Grayscale + posterize on the tiny canvas (few pixels = fast)
+        var imageData = _pixelCtx.getImageData(0, 0, PIXEL_SIZE, PIXEL_SIZE);
+        var d = imageData.data;
+        var step = 255 / (POSTERIZE_LEVELS - 1);
+        for (var i = 0; i < d.length; i += 4) {
+            var gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            gray = Math.round(gray / step) * step;
+            d[i] = gray;
+            d[i + 1] = gray;
+            d[i + 2] = gray;
+        }
+        _pixelCtx.putImageData(imageData, 0, 0);
+
+        // Draw tiny canvas to display canvas (upscale with no smoothing → crisp pixels)
+        _streamCtx.imageSmoothingEnabled = false;
+        _streamCtx.drawImage(_pixelCanvas, 0, 0, _streamCanvas.width, _streamCanvas.height);
+        _streamCanvas.style.display = "";
+    }
+
+    function startSnapshotPolling() {
+        stopSnapshotPolling();
+        _mjpegRetryTimer = setInterval(function () {
+            if (!_streamCanvas || !isActive) return;
+            var img = new Image();
+            img.onload = function () {
+                processAndDrawFrame(img);
+            };
+            img.src = "/room/" + ROOM + "/stream/snapshot?t=" + Date.now();
+        }, 500);
+    }
+
+    function stopSnapshotPolling() {
+        if (_mjpegRetryTimer) {
+            clearInterval(_mjpegRetryTimer);
+            _mjpegRetryTimer = null;
         }
     }
 
@@ -180,21 +227,13 @@
     }
 
     // =========================================================================
-    // Camera (works on both controller and worker)
+    // Camera (worker only)
     // =========================================================================
-    function startCamera(deviceId) {
-        var constraints;
-        if (deviceId) {
-            constraints = {
-                video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false
-            };
-        } else {
-            constraints = {
-                video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false
-            };
-        }
+    function startCamera() {
+        var constraints = {
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        };
 
         // Stop existing stream first
         stopCamera();
@@ -204,20 +243,9 @@
             cameraStream = stream;
             if (localVideo) {
                 localVideo.srcObject = stream;
-            }
-            if (ctrlVideo) {
-                ctrlVideo.srcObject = stream;
-            }
-            if (ctrlCanvas) {
-                ctrlCanvas.style.display = "";
-                startCtrlCanvasLoop();
-            }
-            // Hide MJPEG stream when we're the source
-            if (workerStream) {
-                workerStream.style.display = "none";
+                localVideo.play().catch(function () {});
             }
             console.log("Camera started");
-            populateCameraSelector();
         })
         .catch(function (err) {
             console.error("Camera error:", err);
@@ -231,33 +259,6 @@
         }
         if (localVideo) {
             localVideo.srcObject = null;
-        }
-        if (ctrlVideo) {
-            ctrlVideo.srcObject = null;
-        }
-        stopCtrlCanvasLoop();
-    }
-
-    function startCtrlCanvasLoop() {
-        if (ctrlCanvasRAF || !ctrlCanvasCtx || !ctrlVideo) return;
-        function draw() {
-            if (ctrlVideo.videoWidth > 0) {
-                var vw = ctrlVideo.videoWidth;
-                var vh = ctrlVideo.videoHeight;
-                var size = Math.min(vw, vh);
-                var sx = (vw - size) / 2;
-                var sy = (vh - size) / 2;
-                ctrlCanvasCtx.drawImage(ctrlVideo, sx, sy, size, size, 0, 0, 80, 80);
-            }
-            ctrlCanvasRAF = requestAnimationFrame(draw);
-        }
-        draw();
-    }
-
-    function stopCtrlCanvasLoop() {
-        if (ctrlCanvasRAF) {
-            cancelAnimationFrame(ctrlCanvasRAF);
-            ctrlCanvasRAF = null;
         }
     }
 
@@ -273,15 +274,23 @@
         }
     }
 
+    var UPLOAD_MAX_WIDTH = 640;
+
     function uploadFrame() {
         if (!isActiveSource) return;
         if (!localVideo || !captureCanvas || !cameraStream) return;
         if (localVideo.videoWidth === 0) return; // not ready yet
 
         var ctx = captureCanvas.getContext("2d");
-        captureCanvas.width = localVideo.videoWidth;
-        captureCanvas.height = localVideo.videoHeight;
-        ctx.drawImage(localVideo, 0, 0);
+        var w = localVideo.videoWidth;
+        var h = localVideo.videoHeight;
+        if (w > UPLOAD_MAX_WIDTH) {
+            h = Math.round(h * UPLOAD_MAX_WIDTH / w);
+            w = UPLOAD_MAX_WIDTH;
+        }
+        captureCanvas.width = w;
+        captureCanvas.height = h;
+        ctx.drawImage(localVideo, 0, 0, w, h);
 
         var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.5);
 
@@ -295,97 +304,71 @@
     }
 
     // =========================================================================
-    // Source change handling
+    // Worker rejection handling (room occupied)
     // =========================================================================
-    function handleSourceChange(amISource) {
-        if (amISource === isActiveSource) return; // guard against duplicate calls
-        var wasSource = isActiveSource;
-        isActiveSource = amISource;
+    function handleWorkerRejection() {
+        // Show idle screen with rejection message
+        if (workerIdleMessage) workerIdleMessage.style.display = "flex";
+        if (workerActiveScreen) workerActiveScreen.style.display = "none";
 
-        updateSourceUI();
-
-        if (amISource && !wasSource) {
-            // I became the source — abort MJPEG, start camera
-            if (workerStream) {
-                workerStream.src = "";
-                workerStream.style.display = "none";
-            }
-            startCamera();
-            if (isActive) startFrameUpload();
-        } else if (!amISource && wasSource) {
-            // I lost source status — stop camera, show MJPEG stream
-            stopFrameUpload();
-            stopCamera();
-            if (ctrlCanvas) ctrlCanvas.style.display = "none";
-            showMjpegStream();
-        }
-    }
-
-    function updateSourceUI() {
-        if (sourceStatusEl) {
-            if (isActiveSource) {
-                sourceStatusEl.textContent = "This device is the video source";
-                sourceStatusEl.classList.add("is-source");
-            } else {
-                sourceStatusEl.textContent = "Another device is the video source";
-                sourceStatusEl.classList.remove("is-source");
-            }
-        }
-        if (cameraSelectWrap) {
-            cameraSelectWrap.style.display = isActiveSource ? "" : "none";
-        }
-    }
-
-    // =========================================================================
-    // Camera device picker
-    // =========================================================================
-    function populateCameraSelector() {
-        if (!cameraSelect) return;
-        navigator.mediaDevices.enumerateDevices()
-        .then(function (devices) {
-            var videoDevices = devices.filter(function (d) { return d.kind === "videoinput"; });
-            if (videoDevices.length <= 1) {
-                // Only one camera, hide the picker
-                if (cameraSelectWrap) cameraSelectWrap.style.display = "none";
-                return;
-            }
-            if (!isActiveSource) return;
-
-            // Get current track's device ID
-            var currentDeviceId = "";
-            if (cameraStream) {
-                var tracks = cameraStream.getVideoTracks();
-                if (tracks.length > 0 && tracks[0].getSettings) {
-                    currentDeviceId = tracks[0].getSettings().deviceId || "";
+        var sloganEl = document.getElementById("worker-idle-slogan");
+        if (sloganEl) {
+            sloganEl.textContent = "";
+            _sloganTyped = true; // prevent normal typewriter
+            var lines = ["This workstation is occupied.", "Pursue productivity elsewhere."];
+            var lineIdx = 0;
+            var charIdx = 0;
+            function typeNext() {
+                if (lineIdx >= lines.length) return;
+                if (charIdx < lines[lineIdx].length) {
+                    sloganEl.appendChild(document.createTextNode(lines[lineIdx][charIdx]));
+                    charIdx++;
+                    setTimeout(typeNext, 80);
+                } else {
+                    lineIdx++;
+                    charIdx = 0;
+                    if (lineIdx < lines.length) {
+                        sloganEl.appendChild(document.createElement("br"));
+                        setTimeout(typeNext, 400);
+                    }
                 }
             }
+            setTimeout(typeNext, 500);
+        }
 
-            cameraSelect.innerHTML = "";
-            videoDevices.forEach(function (dev, i) {
-                var opt = document.createElement("option");
-                opt.value = dev.deviceId;
-                opt.textContent = dev.label || ("Camera " + (i + 1));
-                if (dev.deviceId === currentDeviceId) opt.selected = true;
-                cameraSelect.appendChild(opt);
-            });
+        // Hide ID input and status
+        var idBox = document.querySelector(".worker-idle-id");
+        if (idBox) idBox.style.display = "none";
+        var statusEl = document.querySelector(".worker-idle-status");
+        if (statusEl) statusEl.style.display = "none";
 
-            if (cameraSelectWrap) cameraSelectWrap.style.display = "";
-        })
-        .catch(function () {});
-    }
-
-    if (cameraSelect) {
-        cameraSelect.addEventListener("change", function () {
-            if (cameraSelect.value) {
-                startCamera(cameraSelect.value);
-            }
-        });
+        // Don't start heartbeat or SSE — disconnect
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        if (evtSource) { evtSource.close(); }
     }
 
     // =========================================================================
     // Client list rendering
     // =========================================================================
     function renderClientList(clients) {
+        // Update worker label for info line
+        _workerLabel = null;
+        if (clients) {
+            for (var w = 0; w < clients.length; w++) {
+                if (clients[w].role === "worker") {
+                    var lbl = clients[w].label || "";
+                    // Default labels like "Worker (Win32)" mean no Employee ID registered
+                    if (lbl && !/^Worker\s*\(/.test(lbl)) {
+                        _workerLabel = lbl;
+                    } else {
+                        _workerLabel = "NOT REGISTERED";
+                    }
+                    break;
+                }
+            }
+        }
+        updateWorkerInfo();
+
         if (!clientListEl) return;
 
         if (!clients || clients.length === 0) {
@@ -397,36 +380,16 @@
         for (var i = 0; i < clients.length; i++) {
             var c = clients[i];
             var isMe = c.id === CLIENT_ID;
-            var cls = "client-item" + (c.is_source ? " active-source" : "");
+            var cls = "client-item";
 
             html += '<div class="' + cls + '">';
             html += '<span class="client-item-label">' + escapeHtml(c.label || c.id.slice(0, 8)) + '</span>';
             if (isMe) {
                 html += '<span class="client-you-tag">You</span>';
             }
-            if (c.is_source) {
-                html += '<span class="client-source-badge">Source</span>';
-            } else {
-                html += '<button class="client-select-btn" data-client-id="' + escapeHtml(c.id) + '">Set Source</button>';
-            }
             html += '</div>';
         }
         clientListEl.innerHTML = html;
-
-        // Attach click handlers to "Set Source" buttons
-        var btns = clientListEl.querySelectorAll(".client-select-btn");
-        btns.forEach(function (btn) {
-            btn.addEventListener("click", function () {
-                var cid = btn.getAttribute("data-client-id");
-                fetch(API + "/set-source", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ client_id: cid }),
-                }).catch(function (err) {
-                    console.warn("Set source error:", err);
-                });
-            });
-        });
     }
 
     // =========================================================================
@@ -453,6 +416,21 @@
     }
     setInterval(updateIdleClock, 1000);
     updateIdleClock();
+
+    var _workerLabel = null;
+
+    function updateWorkerInfo() {
+        if (!workerInfoEl) return;
+        var parts = [];
+        if (ROOM) parts.push("ROOM: " + ROOM);
+        if (MODE === "controller") {
+            parts.push("WORKER: " + (_workerLabel || "NOT CONNECTED"));
+        } else {
+            parts.push("ID: " + (STORED_WORKER_ID || "NOT REGISTERED"));
+        }
+        workerInfoEl.textContent = parts.join("  /  ");
+    }
+    updateWorkerInfo();
 
     // Populate room code on idle screen
     if (idleRoomCodeEl && ROOM) {
@@ -506,7 +484,9 @@
         var val = workerIdInput.value.trim();
         if (!val) return;
         CLIENT_LABEL = val;
+        STORED_WORKER_ID = val;
         sessionStorage.setItem("panopticum_worker_id", val);
+        updateWorkerInfo();
         fetch(API + "/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -548,7 +528,6 @@
                 initActiveScreenRipples();
             }
             if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
-            if (isActiveSource && !frameUploadInterval) startFrameUpload();
         } else {
             // Session stopped — show idle message, hide active screen
             if (workerActiveScreen) workerActiveScreen.style.display = "none";
@@ -743,15 +722,6 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ active: newActive }),
             });
-
-            // Start/stop frame upload if we're the source
-            if (isActiveSource) {
-                if (newActive) {
-                    startFrameUpload();
-                } else {
-                    stopFrameUpload();
-                }
-            }
         });
     }
 
@@ -1052,12 +1022,26 @@
         updateStartStopButton(data.active);
         updateWorkerIdleState(data.active);
 
-        // Auto-start/stop frame upload if we're the source
-        if (isActiveSource) {
+        if (MODE === "controller") {
             if (data.active) {
+                startSnapshotPolling();
+            } else {
+                stopSnapshotPolling();
+                if (_streamCanvas && _streamCtx) {
+                    _streamCtx.clearRect(0, 0, _streamCanvas.width, _streamCanvas.height);
+                    _streamCanvas.style.display = "none";
+                }
+            }
+        }
+
+        // Worker starts/stops camera + frame upload on active change
+        if (MODE === "worker" && isActiveSource) {
+            if (data.active) {
+                startCamera();
                 startFrameUpload();
             } else {
                 stopFrameUpload();
+                stopCamera();
             }
         }
     });
@@ -1087,10 +1071,6 @@
 
     evtSource.addEventListener("clients", function (e) {
         var data = JSON.parse(e.data);
-        var amISource = data.active_source === CLIENT_ID;
-        if (amISource !== isActiveSource) {
-            handleSourceChange(amISource);
-        }
         renderClientList(data.clients || []);
     });
 
@@ -1181,9 +1161,14 @@
                 updateActionPhaseUI(data.action_phase, data.action_requested || "");
             }
 
-            // If already active and we're the source, start frame upload
-            if (data.active && isActiveSource) {
-                startFrameUpload();
+            // If already active: controller shows MJPEG, worker starts camera
+            if (data.active) {
+                if (MODE === "controller") {
+                    startSnapshotPolling();
+                } else if (MODE === "worker" && isActiveSource) {
+                    startCamera();
+                    startFrameUpload();
+                }
             }
         })
         .catch(function (err) {
@@ -1214,10 +1199,7 @@
     startHeartbeat();
     setupUnregister();
 
-    if (MODE === "controller") {
-        // localVideo stays visually hidden via inline CSS (opacity:0, position:absolute)
-        // MJPEG stream starts after registration confirms source status
-    } else if (MODE === "worker") {
+    if (MODE === "worker") {
         setupWorker();
     }
 })();

@@ -175,17 +175,30 @@ def cleanup_expired():
 # Client management
 # ---------------------------------------------------------------------------
 
-def register_client(room: Room, client_id: str, role: str, label: str = "") -> Client:
-    """Register a client in the room. Auto-assigns first controller as source."""
+def register_client(room: Room, client_id: str, role: str, label: str = "") -> Client | None:
+    """Register a client in the room. Only one worker per room; worker auto-becomes source."""
+    # Allow re-registration of same client
+    if client_id in room.clients:
+        room.clients[client_id].label = label
+        room.clients[client_id].last_heartbeat = time.time()
+        room._clients_version += 1
+        return room.clients[client_id]
+
+    # One worker per room
+    if role == "worker":
+        for c in room.clients.values():
+            if c.role == "worker":
+                return None  # rejected — room occupied
+
     now = time.time()
     client = Client(id=client_id, role=role, label=label, last_heartbeat=now)
     room.clients[client_id] = client
     room._clients_version += 1
 
-    # Auto-assign source if none set and this is a controller
-    if room.active_source_client_id is None and role == "controller":
+    # Worker auto-becomes video source
+    if role == "worker":
         room.active_source_client_id = client_id
-        log.info(f"[{room.id}] Auto-assigned source to {client_id}")
+        log.info(f"[{room.id}] Worker auto-assigned as source: {client_id}")
 
     log.info(f"[{room.id}] Client registered: {client_id} ({role}) — {len(room.clients)} connected")
     return client
@@ -209,12 +222,7 @@ def unregister_client(room: Room, client_id: str):
 
     if room.active_source_client_id == client_id:
         room.active_source_client_id = None
-        # Auto-assign to first remaining controller
-        for cid, c in room.clients.items():
-            if c.role == "controller":
-                room.active_source_client_id = cid
-                log.info(f"[{room.id}] Source re-assigned to {cid}")
-                break
+        log.info(f"[{room.id}] Source cleared (worker left)")
 
     log.info(f"[{room.id}] Client unregistered: {client_id} — {len(room.clients)} remaining")
 
@@ -230,16 +238,6 @@ def cleanup_stale_clients(room: Room):
         unregister_client(room, cid)
     if stale:
         log.info(f"[{room.id}] Cleaned up {len(stale)} stale client(s)")
-
-
-def set_active_source(room: Room, client_id: str) -> bool:
-    """Designate a client as the video source. Returns False if client not found."""
-    if client_id not in room.clients:
-        return False
-    room.active_source_client_id = client_id
-    room._clients_version += 1
-    log.info(f"[{room.id}] Source set to {client_id}")
-    return True
 
 
 def get_client_list(room: Room) -> list[dict]:

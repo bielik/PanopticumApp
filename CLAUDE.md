@@ -12,9 +12,11 @@ Two deployment modes share the same frontend (`static/app.js`, `static/style.css
 ### Key Data Flow (HF Spaces)
 
 ```
-Browser (Controller)          server.py                   Browser (Worker)
-  POST /api/frame ──────────→ Room.latest_frame_jpeg ────→ GET /stream (MJPEG)
-  (base64 JPEG, 4fps)         │
+Browser (Worker)              server.py                   Browser (Controller)
+  getUserMedia ──→ canvas                                   GET /stream/snapshot
+  POST /api/frame ──────────→ Room.latest_frame_jpeg ────→  (polled every 500ms)
+  (base64 JPEG, 640px, 4fps)  │                             ↓
+                               │                         Canvas: pixelate + posterize
                                ├─ Gemini vision ──→ Room.latest_description
                                │                    Room.description_timestamp
                                │
@@ -25,6 +27,8 @@ Browser (Controller)          server.py                   Browser (Worker)
                                                       "audio_robotic" {url}
                                                       "action_phase" {setting, phase, action}
 ```
+
+**Video source is always the worker.** The controller never captures video. Only one worker per room (second worker gets 409 `room_occupied`). Worker camera starts when panopticum is activated via SSE `active` event.
 
 Timestamps (Unix floats from `time.time()`) are the correlation key between description events and audio URLs. The audio URL pattern is `/room/{code}/audio/{timestamp}`.
 
@@ -45,7 +49,7 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 | `static/style.css` | All styling — corporate surveillance aesthetic |
 | `static/jquery.ripples.js` | WebGL water ripple effect plugin (MIT, requires jQuery) |
 | `templates/lobby.html` | Room join/create page with inline JS |
-| `templates/control.html` | Controller page (camera + controls + client panel + activity log) |
+| `templates/control.html` | Controller page (video preview + controls + client panel + activity log) |
 | `templates/worker.html` | Worker page (fullscreen, audio playback, no controls) |
 | `prompts/gemini_surveillance.txt` | Gemini unified prompt (vision + narration + judgment) |
 | `config.yaml` | All configuration (camera, vision, TTS, timing, effects, tone) |
@@ -68,13 +72,21 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 - Activity log entries track `played` boolean; skipped entries get `.skipped` CSS class (dimmed + skip icon)
 - **Tone switch**: current audio finishes naturally, pending old-tone audio is dropped. Log entries retain their original tone label via `description_tone` stored at generation time.
 
+### Video Pipeline
+- **Worker-only source**: Only the worker browser captures video via `getUserMedia`. Controller never uses the camera.
+- **One worker per room**: `register_client()` returns `None` if a worker already exists; server returns 409 `room_occupied`. Rejected workers see "This workstation is occupied" idle screen.
+- **Frame downscaling**: Worker downscales frames to max 640px width before JPEG encoding and upload (saves bandwidth; Gemini receives the full 640px image).
+- **Snapshot polling**: Controller polls `GET /room/{code}/stream/snapshot` every 500ms (replacing unreliable MJPEG `<img>` streaming). Uses `new Image()` preloading to avoid flicker.
+- **Pixelation + posterize**: Controller renders video in a `<canvas>` element. Frames are downscaled to 80x80 (center-cropped to square), grayscale + posterized to 8 levels, then upscaled with `imageSmoothingEnabled = false` for a chunky pixel art look.
+- **Hidden video element**: Worker's `<video>` uses `position:fixed; top:-9999px` instead of `display:none` — Chrome suspends frame decoding for `display:none` elements, causing blank canvas captures.
+
 ### Backend
 - `server.py` uses FastAPI with Jinja2 templates, SSE via raw `StreamingResponse`
 - Per-room state lives in `Room` dataclass (`rooms.py`), stored in global `rooms` dict
 - Analysis runs as `asyncio.create_task` per room, Gemini call runs in thread pool executor
 - Audio files cached in `room.audio_files` dict (timestamp → mp3 bytes), auto-cleaned after 2 minutes
 - Client management: register/heartbeat/unregister with 15s stale timeout
-- Only the designated source client's frame uploads are accepted (403 for others)
+- Only the worker (designated source) client's frame uploads are accepted (403 for others)
 
 ### CSS (`static/style.css`)
 
@@ -122,10 +134,11 @@ Key points:
 
 ### Multi-Client System
 - Clients register with UUID, role (controller/worker), and label
-- First controller auto-becomes video source
-- Source can be switched via "Connected Devices" panel
+- Worker auto-becomes video source on registration; only one worker per room
+- Controller shows connected devices list (no source switching — worker is always source)
 - Heartbeat every 10s, stale cleanup every 5s (15s timeout)
 - `_clients_version` counter triggers SSE `clients` events
+- When worker disconnects, source is cleared (controller circle goes white)
 
 ### Action Mode
 AI issues physical directives and verifies compliance via the camera.

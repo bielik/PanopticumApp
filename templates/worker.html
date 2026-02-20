@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Worker</title>
-    <link rel="stylesheet" href="/static/style.css?v=28">
+    <link rel="stylesheet" href="/static/style.css?v=42">
 </head>
 <body class="worker-mode">
-    <!-- Hidden capture elements (needed when worker is camera source) -->
-    <video id="local-video" autoplay playsinline muted style="display:none"></video>
-    <canvas id="capture-canvas" style="display:none"></canvas>
+    <!-- Hidden capture elements (worker is always the camera source) -->
+    <video id="local-video" autoplay playsinline muted style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+    <canvas id="capture-canvas" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none"></canvas>
 
-    <!-- Fixed clock visible in both idle and active modes -->
+    <!-- Fixed clock + info visible in both idle and active modes -->
     <div class="worker-clock" id="worker-clock"></div>
+    <div class="worker-info" id="worker-info"></div>
 
     <!-- Worker active commentary screen -->
     <div class="worker-active-screen" id="worker-active-screen" style="display:none">
@@ -49,7 +50,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=33"></script>
+    <script src="/static/app.js?v=42"></script>
     <script>
         try {
             var c = document.createElement('canvas');

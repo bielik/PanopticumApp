@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from rooms import (
     Room, cleanup_expired, cleanup_stale_clients, create_room,
     frequency_for_tone, get_client_list, get_room, heartbeat_client,
-    register_client, rooms, set_active_source, unregister_client,
+    register_client, rooms, unregister_client,
 )
 from tone import build_tone_preamble
 from tts import generate_robotic_speech, generate_speech
@@ -242,9 +242,6 @@ class RegisterRequest(BaseModel):
 class HeartbeatRequest(BaseModel):
     client_id: str
 
-class SetSourceRequest(BaseModel):
-    client_id: str
-
 class UnregisterRequest(BaseModel):
     client_id: str
 
@@ -431,6 +428,8 @@ async def room_register_client(code: str, req: RegisterRequest):
     if req.role not in ("controller", "worker"):
         return JSONResponse(status_code=400, content={"error": "Invalid role"})
     client = register_client(room, req.client_id, req.role, req.label)
+    if client is None:
+        return JSONResponse(status_code=409, content={"error": "room_occupied"})
     room.touch()
     return {
         "ok": True,
@@ -449,18 +448,6 @@ async def room_heartbeat(code: str, req: HeartbeatRequest):
         return JSONResponse(status_code=404, content={"error": "Client not found"})
     room.touch()
     return {"ok": True}
-
-
-@app.post("/room/{code}/api/set-source")
-async def room_set_source(code: str, req: SetSourceRequest):
-    room = get_room(code)
-    if not room:
-        return JSONResponse(status_code=404, content={"error": "Room not found"})
-    ok = set_active_source(room, req.client_id)
-    if not ok:
-        return JSONResponse(status_code=404, content={"error": "Client not found"})
-    room.touch()
-    return {"ok": True, "clients": get_client_list(room)}
 
 
 @app.post("/room/{code}/api/unregister")
@@ -540,6 +527,26 @@ async def room_video_stream(code: str):
     return StreamingResponse(
         _mjpeg_generator(room),
         media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.get("/room/{code}/stream/snapshot")
+async def room_video_snapshot(code: str):
+    """Return the latest frame as a single JPEG image."""
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    jpeg = room.latest_frame_jpeg
+    if jpeg is None:
+        return Response(status_code=204)
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )
 
 
