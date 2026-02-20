@@ -64,7 +64,7 @@
     var logCollapseBtn = document.getElementById("log-collapse-btn");
     var logExpandBtn = document.getElementById("log-expand-btn");
 
-    var tonePills = document.querySelectorAll("#tone-pills .pill-btn");
+    var tonePills = document.querySelectorAll("#tone-pills .ctrl-option");
 
     // Slider elements
     var frequencySlider = document.getElementById("frequency-slider");
@@ -75,6 +75,9 @@
     // Camera elements (both controller and worker)
     var localVideo = document.getElementById("local-video");
     var captureCanvas = document.getElementById("capture-canvas");
+
+    // Controller video circle
+    var ctrlVideo = document.getElementById("ctrl-video");
 
     // Worker-specific elements
     var workerStream = document.getElementById("worker-stream");
@@ -94,7 +97,7 @@
     var clientListEl = document.getElementById("client-list");
 
     // Action mode elements
-    var actionSettingPills = document.querySelectorAll("#action-setting-pills .pill-btn");
+    var actionSettingPills = document.querySelectorAll("#action-setting-pills .ctrl-option");
     var actionPhaseLabel = document.getElementById("action-phase-label");
     var actionRequestedText = document.getElementById("action-requested-text");
     var actionTriggerBtn = document.getElementById("action-trigger-btn");
@@ -114,30 +117,6 @@
     // --- Message log ---
     var messageLog = [];
     var MAX_LOG_MESSAGES = 10;
-
-    // --- Motivational messages ---
-    var MOTIVATIONAL_MESSAGES = [
-        "Take a breath.\nYou're exactly where you need to be.",
-        "Progress is invisible\nuntil it isn't.",
-        "Small steps.\nBig things.",
-        "You don't have to be perfect.\nYou just have to begin.",
-        "The work you're doing matters\nmore than you think.",
-        "Stay curious.\nStay kind to yourself.",
-        "One thing at a time.\nThat's enough.",
-        "Rest is not the opposite of productivity.\nIt's the source of it.",
-        "You are not your to-do list.",
-        "Deep focus is a superpower.\nYou already have it.",
-        "Trust the process.\nEven the slow days count.",
-        "Your pace is valid.",
-        "Breathe in purpose.\nBreathe out doubt.",
-        "Not every hour needs to be optimized.\nSome just need to be lived.",
-        "You showed up.\nThat's the hardest part.",
-        "Clarity comes from action,\nnot from waiting.",
-        "Be gentle with yourself.\nYou're doing a good job.",
-        "The best ideas arrive\nwhen you stop forcing them.",
-    ];
-    var motivationalIndex = 0;
-    var motivationalInterval = null;
 
     // =========================================================================
     // Client registration & heartbeat
@@ -176,6 +155,9 @@
         }
         if (localVideo) {
             localVideo.style.display = "none";
+        }
+        if (ctrlVideo) {
+            ctrlVideo.style.display = "none";
         }
     }
 
@@ -222,7 +204,14 @@
             cameraStream = stream;
             if (localVideo) {
                 localVideo.srcObject = stream;
-                localVideo.style.display = "";
+                // Only show localVideo if there's no ctrl-video circle (worker page)
+                if (!ctrlVideo) {
+                    localVideo.style.display = "";
+                }
+            }
+            if (ctrlVideo) {
+                ctrlVideo.srcObject = stream;
+                ctrlVideo.style.display = "";
             }
             // Hide MJPEG stream when we're the source
             if (workerStream) {
@@ -243,6 +232,9 @@
         }
         if (localVideo) {
             localVideo.srcObject = null;
+        }
+        if (ctrlVideo) {
+            ctrlVideo.srcObject = null;
         }
     }
 
@@ -277,13 +269,6 @@
         }).catch(function (err) {
             console.warn("Frame upload error:", err);
         });
-    }
-
-    // Apply CSS filter to video element
-    function applyVideoFilter(effect) {
-        var filter = EFFECT_FILTERS[effect] || "none";
-        if (localVideo) localVideo.style.filter = filter;
-        if (workerStream) workerStream.style.filter = filter;
     }
 
     // =========================================================================
@@ -750,91 +735,8 @@
     }
 
     // =========================================================================
-    // Timestamp clock
-    // =========================================================================
-    function updateTimestamp() {
-        if (!timestampEl) return;
-        var now = new Date();
-        var y = now.getFullYear();
-        var mo = String(now.getMonth() + 1).padStart(2, "0");
-        var d = String(now.getDate()).padStart(2, "0");
-        var h = String(now.getHours()).padStart(2, "0");
-        var mi = String(now.getMinutes()).padStart(2, "0");
-        var s = String(now.getSeconds()).padStart(2, "0");
-        timestampEl.textContent = y + "-" + mo + "-" + d + "  " + h + ":" + mi + ":" + s;
-    }
-    setInterval(updateTimestamp, 1000);
-    updateTimestamp();
-
-    if (recDot) recDot.classList.add("blink");
-
-    // =========================================================================
-    // Effect overlay visibility
-    // =========================================================================
-    function updateOverlayForEffect(effect) {
-        currentEffect = effect;
-        var isCctv = effect === "cctv";
-        var isInsta = effect === "insta";
-
-        if (overlayTop) overlayTop.style.display = isCctv ? "flex" : "none";
-        if (camLabel) camLabel.style.display = isCctv ? "block" : "none";
-        if (scanlines) scanlines.style.display = isCctv ? "block" : "none";
-        if (vignette) vignette.style.display = isInsta ? "block" : "none";
-        if (cctvLyricsEl) cctvLyricsEl.style.display = isCctv ? "block" : "none";
-
-        if (motivationalEl) {
-            motivationalEl.style.display = isInsta ? "flex" : "none";
-        }
-
-        if (isInsta) {
-            startMotivationalRotation();
-        } else {
-            stopMotivationalRotation();
-        }
-
-        // Apply CSS filter
-        applyVideoFilter(effect);
-    }
-
-    // =========================================================================
-    // Motivational message rotation
-    // =========================================================================
-    function showNextMotivational() {
-        if (!motivationalEl) return;
-        var textEl = document.getElementById("motivational-text");
-        if (!textEl) return;
-        textEl.classList.remove("visible");
-        setTimeout(function () {
-            textEl.textContent = MOTIVATIONAL_MESSAGES[motivationalIndex];
-            motivationalIndex = (motivationalIndex + 1) % MOTIVATIONAL_MESSAGES.length;
-            textEl.classList.add("visible");
-        }, 1500);
-    }
-
-    function startMotivationalRotation() {
-        if (motivationalInterval) return;
-        showNextMotivational();
-        motivationalInterval = setInterval(showNextMotivational, 60000);
-    }
-
-    function stopMotivationalRotation() {
-        if (motivationalInterval) {
-            clearInterval(motivationalInterval);
-            motivationalInterval = null;
-        }
-        var textEl = document.getElementById("motivational-text");
-        if (textEl) textEl.classList.remove("visible");
-    }
-
-    // =========================================================================
     // Pill highlighting
     // =========================================================================
-    function highlightEffectPill(effectName) {
-        effectPills.forEach(function (btn) {
-            btn.classList.toggle("active", btn.dataset.effect === effectName);
-        });
-    }
-
     function highlightTonePill(toneValue) {
         var tv = String(toneValue);
         tonePills.forEach(function (btn) {
@@ -843,33 +745,9 @@
     }
 
     // =========================================================================
-    // Effect selection
-    // =========================================================================
-    function setEffect(effect, fromSync) {
-        currentEffect = effect;
-        fetch(API + "/effect", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ effect: effect }),
-        });
-        highlightEffectPill(effect);
-        updateOverlayForEffect(effect);
-
-        if (isSynced && !fromSync && EFFECT_TO_TONE[effect] !== undefined) {
-            setTone(EFFECT_TO_TONE[effect], true);
-        }
-    }
-
-    effectPills.forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            setEffect(btn.dataset.effect, false);
-        });
-    });
-
-    // =========================================================================
     // Tone selection
     // =========================================================================
-    function setTone(toneValue, fromSync) {
+    function setTone(toneValue) {
         currentTone = String(toneValue);
         fetch(API + "/tone", {
             method: "POST",
@@ -877,30 +755,13 @@
             body: JSON.stringify({ value: parseFloat(toneValue) }),
         });
         highlightTonePill(toneValue);
-
-        if (isSynced && !fromSync && TONE_TO_EFFECT[currentTone] !== undefined) {
-            setEffect(TONE_TO_EFFECT[currentTone], true);
-        }
     }
 
     tonePills.forEach(function (btn) {
         btn.addEventListener("click", function () {
-            setTone(btn.dataset.tone, false);
+            setTone(btn.dataset.tone);
         });
     });
-
-    // =========================================================================
-    // Sync toggle
-    // =========================================================================
-    if (syncCheckbox) {
-        isSynced = syncCheckbox.checked;
-        syncCheckbox.addEventListener("change", function () {
-            isSynced = syncCheckbox.checked;
-            if (isSynced && EFFECT_TO_TONE[currentEffect] !== undefined) {
-                setTone(EFFECT_TO_TONE[currentEffect], true);
-            }
-        });
-    }
 
     // =========================================================================
     // Frequency slider (logarithmic: 3s – 600s)
@@ -1114,13 +975,6 @@
         }
     });
 
-    evtSource.addEventListener("effect", function (e) {
-        var data = JSON.parse(e.data);
-        highlightEffectPill(data.effect);
-        updateOverlayForEffect(data.effect);
-        currentEffect = data.effect;
-    });
-
     evtSource.addEventListener("tone", function (e) {
         var data = JSON.parse(e.data);
         var v = parseFloat(data.value);
@@ -1177,22 +1031,6 @@
         if (data.url) playRoboticAudio(data.url);
     });
 
-    var lyricsTimeout = null;
-    evtSource.addEventListener("lyrics", function (e) {
-        var data = JSON.parse(e.data);
-        if (!cctvLyricsEl || !data.text) return;
-        if (lyricsTimeout) clearTimeout(lyricsTimeout);
-        cctvLyricsEl.textContent = data.text;
-        // Ensure lyrics element is visible when in CCTV mode
-        cctvLyricsEl.style.display = "block";
-        cctvLyricsEl.classList.remove("visible");
-        void cctvLyricsEl.offsetWidth; // force reflow for CSS transition
-        cctvLyricsEl.classList.add("visible");
-        lyricsTimeout = setTimeout(function () {
-            cctvLyricsEl.classList.remove("visible");
-        }, 8000);
-    });
-
     evtSource.onerror = function () {
         console.warn("SSE connection lost, reconnecting...");
     };
@@ -1205,9 +1043,6 @@
         .then(function (data) {
             updateStartStopButton(data.active);
             updateWorkerIdleState(data.active);
-            highlightEffectPill(data.effect);
-            updateOverlayForEffect(data.effect);
-            currentEffect = data.effect;
 
             var v = parseFloat(data.tone);
             var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";

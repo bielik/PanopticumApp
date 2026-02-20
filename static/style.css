@@ -1022,6 +1022,323 @@ body:not(.worker-mode):active {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23161E26' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
+/* --- Controller redesigned layout --- */
+body.controller-mode::before {
+    content: '';
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 1px solid #fff;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.ctrl-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: #2e3f4b;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+}
+
+.ctrl-circle {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: ctrl-circle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ctrl-circle-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.12); }
+}
+
+.ctrl-circle video,
+.ctrl-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Reposition clock and logo for controller */
+body.controller-mode .worker-clock { top: 40px; }
+body.controller-mode .active-logo { bottom: 40px; }
+
+/* Cross dividers */
+.ctrl-divider-v {
+    position: fixed;
+    left: 50%;
+    top: 75px;
+    bottom: 145px;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.3);
+    z-index: 50;
+}
+
+.ctrl-divider-h {
+    position: fixed;
+    top: 50%;
+    left: 21px;
+    right: 21px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.3);
+    z-index: 50;
+}
+
+/* Base quadrant */
+.ctrl-quadrant {
+    position: fixed;
+    z-index: 30;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ctrl-q1 {
+    top: 70px;
+    left: 21px;
+    right: 50%;
+    bottom: 50%;
+    padding: 20px 30px;
+}
+
+.ctrl-q2 {
+    top: 70px;
+    left: 50%;
+    right: 21px;
+    bottom: 50%;
+    padding: 20px 24px;
+    overflow: hidden;
+}
+
+.ctrl-q3 {
+    top: 50%;
+    left: 21px;
+    right: 50%;
+    bottom: 70px;
+    padding: 20px 30px;
+}
+
+.ctrl-q4 {
+    top: 50%;
+    left: 50%;
+    right: 21px;
+    bottom: 70px;
+    padding: 20px 24px;
+}
+
+/* Quadrant section header */
+.ctrl-q-header {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Quadrant scrollbars */
+.ctrl-quadrant::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ctrl-quadrant::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ctrl-quadrant::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0;
+}
+
+.ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ctrl-label {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.ctrl-selector {
+    display: flex;
+    align-items: center;
+}
+
+.ctrl-option {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    opacity: 0.6;
+    cursor: pointer;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    transition: opacity 0.2s, text-shadow 0.2s;
+    background: none;
+    border: none;
+}
+
+.ctrl-option:hover {
+    opacity: 0.9;
+}
+
+.ctrl-option.active {
+    opacity: 1;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.ctrl-sep {
+    color: #fff;
+    opacity: 0.3;
+    padding: 0 4px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.ctrl-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ctrl-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+}
+
+.ctrl-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.ctrl-range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.ctrl-value {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ctrl-action-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ctrl-btn {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: 400;
+    padding: 8px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.ctrl-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+.ctrl-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.ctrl-btn:disabled:hover {
+    background: transparent;
+}
+
+.ctrl-screen .start-stop-btn {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 12px 28px;
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.ctrl-link {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    text-align: center;
+}
+
+.ctrl-link:hover {
+    color: #fff;
+}
+
+/* Activity log scrollbar within Q2 */
+.ctrl-q2 .message-log-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ctrl-q2 .message-log-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ctrl-q2 .message-log-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0;
+}
+
 /* --- Worker mode --- */
 body.worker-mode {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
