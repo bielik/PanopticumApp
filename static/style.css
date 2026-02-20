@@ -982,8 +982,8 @@ body.controller-mode .active-logo {
 }
 
 .ctrl-circle {
-    width: 560px;
-    height: 560px;
+    width: clamp(200px, 35vw, 420px);
+    height: clamp(200px, 35vw, 420px);
     border-radius: 50%;
     overflow: hidden;
     position: fixed;
@@ -1021,7 +1021,7 @@ body.controller-mode .active-logo {
     transform: translate(-50%, -50%);
     font-family: 'Inter', sans-serif;
     font-weight: 700;
-    font-size: clamp(3.5rem, 7vw, 5.5rem);
+    font-size: clamp(2.5rem, 5vw, 4rem);
     color: #fff;
     letter-spacing: 2px;
     text-align: center;
@@ -1393,7 +1393,7 @@ body.controller-mode .active-logo {
 }
 
 /* --- Controller responsive: stack quadrants vertically on small screens --- */
-@media (max-width: 899px), (max-height: 899px) {
+@media (max-width: 799px), (max-height: 799px) {
     /* Match body background to ctrl-screen so no green bleeds through */
     body.controller-mode {
         background: #2e3f4b;
