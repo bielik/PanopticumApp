@@ -197,11 +197,68 @@ Element stack (top to bottom):
 
 | Property | Value |
 |----------|-------|
-| Background | `var(--lumon-dark)` |
-| Panels | 1px `--lumon-green-deep` border, transparent fill |
-| Text | `--lumon-light` primary, `--lumon-green` for labels/active |
-| Buttons | Outlined `--lumon-green` border, fill on hover |
-| No custom cursor | Standard cursor for precision controls |
+| Background | `#2e3f4b` (dark blue-gray, via `.ctrl-screen`) |
+| Frame | 1px white border, 20px inset from edges |
+| Layout | 4-quadrant cross layout with centered video circle |
+| Cursor | Custom circle (same as idle/lobby) |
+
+#### Cross Layout
+
+Two 1px white dividers (vertical + horizontal) split the screen into 4 quadrants. The video circle sits at the center intersection, above all quadrants (z-index 100).
+
+| Quadrant | Position | Content |
+|----------|----------|---------|
+| Q1 (top-left) | Actions | Start/Stop + Request Action buttons |
+| Q2 (top-right) | Activity Log | Scrollable message list, right-aligned |
+| Q3 (bottom-left) | Settings | Action Mode, Comment Tone, Frequency, Length |
+| Q4 (bottom-right) | App Status | Phase label, connected devices list |
+
+- Vertical divider: starts 20px below clock, ends 20px above logo
+- Horizontal divider: full width within the white frame
+- Clock: repositioned to `top: 40px`, logo to `bottom: 40px`
+- Quadrant headers: 0.7rem, uppercase, dimmed white (`rgba(255,255,255,0.4)`)
+
+#### Video Circle
+
+| Property | Value |
+|----------|-------|
+| Size | 320px diameter |
+| Border | 1px solid white |
+| Background | `#96ada2` (desaturated sage) |
+| Video | 80x80 canvas, `image-rendering: pixelated`, `filter: grayscale(1)` |
+| Blend | `mix-blend-mode: luminosity` — video takes sage tint from background |
+| Inner shadow | `::after` pseudo — `inset 0 6px 40px rgba(0,0,0,0.8)` |
+| Video source | Hidden `<video>` decoded at full res, drawn to small canvas via `requestAnimationFrame` for pixelated surveillance aesthetic |
+
+#### Bar Sliders (Frequency, Comment Length)
+
+| Property | Value |
+|----------|-------|
+| Width | 200px fixed |
+| Height | 30px |
+| Border | 1px `rgba(255,255,255,0.4)` |
+| Background | transparent |
+| Fill | `rgba(255,255,255,0.15)` from left edge |
+| Text | Centered value label (Share Tech Mono, 0.85rem, white) |
+| Interaction | Click/drag sets value, hidden `<input type="range">` stores state |
+
+#### Action Buttons (Q1)
+
+Unified `.ctrl-action-btn` style, 200px max-width. Same border/text treatment as bar sliders. Active state: red border + text for stop.
+
+#### Activity Log (Q2)
+
+- Latest entry: bold (700), white glow (`text-shadow: 0 0 8px rgba(255,255,255,0.5)`)
+- Past entries: dimmed (`opacity: 0.6`)
+- Skipped entries: further dimmed (`opacity: 0.45`) with skip icon
+- Right-aligned within quadrant
+
+#### Settings Order (Q3)
+
+1. Action Mode (Manual | Automatic)
+2. Comment Tone (Supportive | Neutral | Judgmental)
+3. Comment Frequency (bar slider)
+4. Comment Length (bar slider)
 
 ## Responsive Breakpoints
 

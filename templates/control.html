@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=29">
+    <link rel="stylesheet" href="/static/style.css?v=32">
 </head>
 <body class="controller-mode">
     <!-- Hidden capture elements -->
@@ -24,6 +24,7 @@
         <!-- Circle with live video -->
         <div class="ctrl-circle" id="ctrl-circle">
             <video id="ctrl-video" autoplay playsinline muted></video>
+            <canvas id="ctrl-canvas" width="80" height="80"></canvas>
             <img id="worker-stream" src="" alt="" style="display:none">
         </div>
 
@@ -31,41 +32,11 @@
         <div class="ctrl-divider ctrl-divider-v"></div>
         <div class="ctrl-divider ctrl-divider-h"></div>
 
-        <!-- Q1: Settings (top-left) -->
+        <!-- Q1: Actions (top-left) -->
         <div class="ctrl-quadrant ctrl-q1">
-            <div class="ctrl-q-header">Settings</div>
-            <div class="ctrl-group">
-                <span class="ctrl-label">Tone</span>
-                <div class="ctrl-selector" id="tone-pills">
-                    <span class="ctrl-option" data-tone="0">Supportive</span>
-                    <span class="ctrl-sep">|</span>
-                    <span class="ctrl-option active" data-tone="0.5">Neutral</span>
-                    <span class="ctrl-sep">|</span>
-                    <span class="ctrl-option" data-tone="1">Judgmental</span>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <span class="ctrl-label">Frequency</span>
-                <div class="ctrl-slider-row">
-                    <input type="range" id="frequency-slider" class="ctrl-range" min="0" max="100" step="1" value="19">
-                    <span class="ctrl-value" id="frequency-value">8s</span>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <span class="ctrl-label">Comment Length</span>
-                <div class="ctrl-slider-row">
-                    <input type="range" id="comment-length-slider" class="ctrl-range" min="3" max="50" step="1" value="10">
-                    <span class="ctrl-value" id="comment-length-value">10 words</span>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <span class="ctrl-label">Action Mode</span>
-                <div class="ctrl-selector" id="action-setting-pills">
-                    <span class="ctrl-option active" data-action-setting="manual">Manual</span>
-                    <span class="ctrl-sep">|</span>
-                    <span class="ctrl-option" data-action-setting="automatic">Automatic</span>
-                </div>
-            </div>
+            <div class="ctrl-q-header">Actions</div>
+            <button class="ctrl-action-btn inactive" id="start-stop-btn">START PANOPTICUM</button>
+            <button class="ctrl-action-btn" id="action-trigger-btn">Request Action</button>
         </div>
 
         <!-- Q2: Activity Log (top-right) -->
@@ -76,27 +47,57 @@
             </div>
         </div>
 
-        <!-- Q3: Actions (bottom-left) -->
+        <!-- Q3: Settings (bottom-left) -->
         <div class="ctrl-quadrant ctrl-q3">
-            <div class="ctrl-q-header">Actions</div>
-            <button class="start-stop-btn inactive" id="start-stop-btn">START PANOPTICUM</button>
-            <button class="ctrl-btn" id="action-trigger-btn">Request Action</button>
-            <div class="ctrl-action-status">
-                <span class="action-phase-label" id="action-phase-label">Commenting</span>
-                <span class="action-requested-text" id="action-requested-text"></span>
+            <div class="ctrl-q-header">Settings</div>
+            <div class="ctrl-group">
+                <span class="ctrl-label">Action Mode</span>
+                <div class="ctrl-selector" id="action-setting-pills">
+                    <span class="ctrl-option active" data-action-setting="manual">Manual</span>
+                    <span class="ctrl-sep">|</span>
+                    <span class="ctrl-option" data-action-setting="automatic">Automatic</span>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <span class="ctrl-label">Comment Tone</span>
+                <div class="ctrl-selector" id="tone-pills">
+                    <span class="ctrl-option" data-tone="0">Supportive</span>
+                    <span class="ctrl-sep">|</span>
+                    <span class="ctrl-option active" data-tone="0.5">Neutral</span>
+                    <span class="ctrl-sep">|</span>
+                    <span class="ctrl-option" data-tone="1">Judgmental</span>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <span class="ctrl-label">Comment Frequency</span>
+                <div class="ctrl-bar-slider" id="frequency-bar">
+                    <div class="ctrl-bar-fill" id="frequency-fill"></div>
+                    <span class="ctrl-bar-text" id="frequency-value">8s</span>
+                    <input type="range" id="frequency-slider" min="0" max="100" step="1" value="19" style="display:none">
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <span class="ctrl-label">Comment Length</span>
+                <div class="ctrl-bar-slider" id="comment-length-bar">
+                    <div class="ctrl-bar-fill" id="comment-length-fill"></div>
+                    <span class="ctrl-bar-text" id="comment-length-value">10 words</span>
+                    <input type="range" id="comment-length-slider" min="3" max="50" step="1" value="10" style="display:none">
+                </div>
             </div>
         </div>
 
         <!-- Q4: App Status (bottom-right) -->
         <div class="ctrl-quadrant ctrl-q4">
             <div class="ctrl-q-header">App Status</div>
+            <div class="ctrl-action-status">
+                <span class="action-phase-label" id="action-phase-label">Commenting</span>
+                <span class="action-requested-text" id="action-requested-text"></span>
+            </div>
             <span class="ctrl-label">Connected Devices</span>
-            <span id="source-status" class="source-status"></span>
             <div id="client-list" class="client-list"></div>
             <div id="camera-select-wrap" class="camera-select-wrap" style="display:none">
                 <select id="camera-select" class="camera-select"></select>
             </div>
-            <a href="/room/{{ room_code }}/worker" target="_blank" class="ctrl-link">Open Worker Window &#8599;</a>
         </div>
     </div>
 
@@ -106,7 +107,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=29"></script>
+    <script src="/static/app.js?v=30"></script>
     <script>
         try {
             var c = document.createElement('canvas');

@@ -587,8 +587,6 @@ body::after {
 
 .message-log-item.latest {
     background: rgba(255, 255, 255, 0.08);
-    border-left: 3px solid #fff;
-    padding-left: 25px;
 }
 
 .message-log-time {
@@ -634,12 +632,14 @@ body::after {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.85);
+    color: #fff;
+    opacity: 0.6;
 }
 
 .message-log-item.latest .message-log-text {
-    font-weight: 400;
-    color: #fff;
+    font-weight: 700;
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .message-log-item.skipped .message-log-text {
@@ -703,20 +703,16 @@ body::after {
 
 .action-phase-label {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 4px 10px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #fff;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
     white-space: nowrap;
 }
 
 .action-phase-label.phase-requesting,
 .action-phase-label.phase-verifying {
-    background: rgba(217, 119, 6, 0.2);
     color: #fbbf24;
 }
 
@@ -848,7 +844,6 @@ body.worker-mode .action-panel {
 
 .client-item.active-source {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .client-item-role {
@@ -860,8 +855,7 @@ body.worker-mode .action-panel {
 .client-item-label {
     flex: 1;
     color: #fff;
-    opacity: 0.6;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1048,8 +1042,8 @@ body.controller-mode::before {
 }
 
 .ctrl-circle {
-    width: 200px;
-    height: 200px;
+    width: 320px;
+    height: 320px;
     border-radius: 50%;
     overflow: hidden;
     position: fixed;
@@ -1057,21 +1051,47 @@ body.controller-mode::before {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 100;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    animation: ctrl-circle-pulse 2s ease-in-out infinite;
+    border: 1px solid #fff;
+    background: #96ada2;
 }
 
-@keyframes ctrl-circle-pulse {
-    0%, 100% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -50%) scale(1.12); }
+.ctrl-circle::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: inset 0 6px 40px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 2;
 }
 
-.ctrl-circle video,
+.ctrl-circle video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    pointer-events: none;
+}
+
 .ctrl-circle img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    filter: grayscale(1);
+}
+
+.ctrl-circle canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    filter: grayscale(1);
+    mix-blend-mode: luminosity;
 }
 
 /* Reposition clock and logo for controller */
@@ -1124,6 +1144,8 @@ body.controller-mode .active-logo { bottom: 40px; }
     bottom: 50%;
     padding: 20px 24px;
     overflow: hidden;
+    align-items: flex-end;
+    text-align: right;
 }
 
 .ctrl-q3 {
@@ -1131,7 +1153,7 @@ body.controller-mode .active-logo { bottom: 40px; }
     left: 21px;
     right: 50%;
     bottom: 70px;
-    padding: 20px 30px;
+    padding: 40px 30px 20px;
 }
 
 .ctrl-q4 {
@@ -1139,7 +1161,9 @@ body.controller-mode .active-logo { bottom: 40px; }
     left: 50%;
     right: 21px;
     bottom: 70px;
-    padding: 20px 24px;
+    padding: 40px 24px 20px;
+    align-items: flex-end;
+    text-align: right;
 }
 
 /* Quadrant section header */
@@ -1217,52 +1241,41 @@ body.controller-mode .active-logo { bottom: 40px; }
     font-size: 0.85rem;
 }
 
-.ctrl-slider-row {
+/* Bar slider */
+.ctrl-bar-slider {
+    position: relative;
+    width: 200px;
+    height: 30px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    user-select: none;
+}
+
+.ctrl-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    pointer-events: none;
+    transition: width 0.05s linear;
+}
+
+.ctrl-bar-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
-    gap: 12px;
-}
-
-.ctrl-range {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 120px;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 0;
-    outline: none;
-    cursor: pointer;
-}
-
-.ctrl-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
-}
-
-.ctrl-range::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
-}
-
-.ctrl-value {
+    justify-content: center;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
     color: #fff;
-    min-width: 52px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    pointer-events: none;
+    letter-spacing: 1px;
 }
 
 .ctrl-action-status {
@@ -1301,13 +1314,51 @@ body.controller-mode .active-logo { bottom: 40px; }
     background: transparent;
 }
 
-.ctrl-screen .start-stop-btn {
+.ctrl-action-btn {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: 0.85rem;
-    padding: 12px 28px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    padding: 10px 18px;
+    max-width: 200px;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.ctrl-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+.ctrl-action-btn.inactive {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+.ctrl-action-btn.active {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.ctrl-action-btn.active:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.ctrl-action-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.ctrl-action-btn:disabled:hover {
+    background: transparent;
 }
 
 .ctrl-link {

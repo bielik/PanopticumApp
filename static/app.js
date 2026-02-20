@@ -78,6 +78,9 @@
 
     // Controller video circle
     var ctrlVideo = document.getElementById("ctrl-video");
+    var ctrlCanvas = document.getElementById("ctrl-canvas");
+    var ctrlCanvasCtx = ctrlCanvas ? ctrlCanvas.getContext("2d") : null;
+    var ctrlCanvasRAF = null;
 
     // Worker-specific elements
     var workerStream = document.getElementById("worker-stream");
@@ -211,7 +214,10 @@
             }
             if (ctrlVideo) {
                 ctrlVideo.srcObject = stream;
-                ctrlVideo.style.display = "";
+            }
+            if (ctrlCanvas) {
+                ctrlCanvas.style.display = "";
+                startCtrlCanvasLoop();
             }
             // Hide MJPEG stream when we're the source
             if (workerStream) {
@@ -235,6 +241,30 @@
         }
         if (ctrlVideo) {
             ctrlVideo.srcObject = null;
+        }
+        stopCtrlCanvasLoop();
+    }
+
+    function startCtrlCanvasLoop() {
+        if (ctrlCanvasRAF || !ctrlCanvasCtx || !ctrlVideo) return;
+        function draw() {
+            if (ctrlVideo.videoWidth > 0) {
+                var vw = ctrlVideo.videoWidth;
+                var vh = ctrlVideo.videoHeight;
+                var size = Math.min(vw, vh);
+                var sx = (vw - size) / 2;
+                var sy = (vh - size) / 2;
+                ctrlCanvasCtx.drawImage(ctrlVideo, sx, sy, size, size, 0, 0, 80, 80);
+            }
+            ctrlCanvasRAF = requestAnimationFrame(draw);
+        }
+        draw();
+    }
+
+    function stopCtrlCanvasLoop() {
+        if (ctrlCanvasRAF) {
+            cancelAnimationFrame(ctrlCanvasRAF);
+            ctrlCanvasRAF = null;
         }
     }
 
@@ -294,6 +324,7 @@
             stopFrameUpload();
             stopCamera();
             if (localVideo) localVideo.style.display = "none";
+            if (ctrlCanvas) ctrlCanvas.style.display = "none";
             showMjpegStream();
         }
     }
@@ -377,7 +408,6 @@
             var cls = "client-item" + (c.is_source ? " active-source" : "");
 
             html += '<div class="' + cls + '">';
-            html += '<span class="client-item-role">' + escapeHtml(c.role) + '</span>';
             html += '<span class="client-item-label">' + escapeHtml(c.label || c.id.slice(0, 8)) + '</span>';
             if (isMe) {
                 html += '<span class="client-you-tag">You</span>';
@@ -824,6 +854,59 @@
     }
 
     // =========================================================================
+    // Bar slider interaction
+    // =========================================================================
+    function updateBarFill(slider, fillEl) {
+        if (!slider || !fillEl) return;
+        var min = parseFloat(slider.min);
+        var max = parseFloat(slider.max);
+        var val = parseFloat(slider.value);
+        var pct = ((val - min) / (max - min)) * 100;
+        fillEl.style.width = pct + "%";
+    }
+
+    function initBarSlider(barEl, slider) {
+        if (!barEl || !slider) return;
+        var fillEl = barEl.querySelector(".ctrl-bar-fill");
+
+        function setFromX(clientX) {
+            var rect = barEl.getBoundingClientRect();
+            var pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            var min = parseFloat(slider.min);
+            var max = parseFloat(slider.max);
+            var step = parseFloat(slider.step) || 1;
+            var val = Math.round((min + pct * (max - min)) / step) * step;
+            val = Math.max(min, Math.min(max, val));
+            slider.value = val;
+            slider.dispatchEvent(new Event("input"));
+            updateBarFill(slider, fillEl);
+        }
+
+        barEl.addEventListener("mousedown", function (e) {
+            setFromX(e.clientX);
+            function onMove(ev) { setFromX(ev.clientX); }
+            function onUp() {
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+                slider.dispatchEvent(new Event("change"));
+            }
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
+        });
+
+        // Sync fill on input events (from SSE updates)
+        slider.addEventListener("input", function () {
+            updateBarFill(slider, fillEl);
+        });
+
+        // Initial fill
+        updateBarFill(slider, fillEl);
+    }
+
+    initBarSlider(document.getElementById("frequency-bar"), frequencySlider);
+    initBarSlider(document.getElementById("comment-length-bar"), commentLengthSlider);
+
+    // =========================================================================
     // Message log
     // =========================================================================
     function toneLabel(tone) {
@@ -1007,14 +1090,20 @@
         var data = JSON.parse(e.data);
         var secs = Math.round(data.value);
         updateFrequencyLabel(secs);
-        if (frequencySlider) frequencySlider.value = frequencyToSlider(secs);
+        if (frequencySlider) {
+            frequencySlider.value = frequencyToSlider(secs);
+            frequencySlider.dispatchEvent(new Event("input"));
+        }
     });
 
     evtSource.addEventListener("comment_length", function (e) {
         var data = JSON.parse(e.data);
         var words = data.value;
         updateCommentLengthLabel(words);
-        if (commentLengthSlider) commentLengthSlider.value = words;
+        if (commentLengthSlider) {
+            commentLengthSlider.value = words;
+            commentLengthSlider.dispatchEvent(new Event("input"));
+        }
     });
 
     // Audio events (both modes mark log entries; only worker plays audio)
@@ -1055,11 +1144,17 @@
             if (data.frequency) {
                 var freqSecs = Math.round(data.frequency);
                 updateFrequencyLabel(freqSecs);
-                if (frequencySlider) frequencySlider.value = frequencyToSlider(freqSecs);
+                if (frequencySlider) {
+                    frequencySlider.value = frequencyToSlider(freqSecs);
+                    frequencySlider.dispatchEvent(new Event("input"));
+                }
             }
             if (data.comment_length) {
                 updateCommentLengthLabel(data.comment_length);
-                if (commentLengthSlider) commentLengthSlider.value = data.comment_length;
+                if (commentLengthSlider) {
+                    commentLengthSlider.value = data.comment_length;
+                    commentLengthSlider.dispatchEvent(new Event("input"));
+                }
             }
 
             // Action mode initial state
