@@ -554,12 +554,14 @@
             if (workerActiveScreen) {
                 workerActiveScreen.style.display = "flex";
                 initActiveScreenRipples();
+                initFrostGame();
             }
             if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
         } else {
             // Session stopped — show idle message, hide active screen
             if (workerActiveScreen) workerActiveScreen.style.display = "none";
             destroyActiveScreenRipples();
+            destroyFrostGame();
             clearActiveText();
             if (workerIdleMessage) {
                 workerIdleMessage.style.display = "flex";
@@ -665,6 +667,197 @@
             el.textContent = "";
             el.classList.remove("typing");
         }
+    }
+
+    // =========================================================================
+    // Frost tile game (worker active screen)
+    // =========================================================================
+    var FROST_COLS = 10;
+    var FROST_ROWS = 8;
+    var FROST_TOTAL = FROST_COLS * FROST_ROWS;
+    var FROST_TIMEOUT = 20000;
+
+
+    var _frostTiles = null;    // Float64Array — last-hover timestamp per tile
+    var _frostFrozen = null;   // Uint8Array — 0=warm, 1=frozen
+    var _frostCanvas = null;
+    var _frostCtx = null;
+    var _frostScoreEl = null;
+    var _frostAnimFrame = null;
+    var _frostActive = false;
+    var _frostGameOver = false;
+    var _frostMoveHandler = null;
+    var _frostResizeHandler = null;
+
+    function frostGridGeometry() {
+        if (!_frostCanvas) return { tileW: 0, tileH: 0 };
+        return {
+            tileW: _frostCanvas.width / FROST_COLS,
+            tileH: _frostCanvas.height / FROST_ROWS
+        };
+    }
+
+    function frostTileFromMouse(clientX, clientY) {
+        if (!_frostCanvas) return -1;
+        var rect = _frostCanvas.getBoundingClientRect();
+        var x = (clientX - rect.left) * (_frostCanvas.width / rect.width);
+        var y = (clientY - rect.top) * (_frostCanvas.height / rect.height);
+        if (x < 0 || y < 0 || x >= _frostCanvas.width || y >= _frostCanvas.height) return -1;
+        var col = Math.floor(x / (_frostCanvas.width / FROST_COLS));
+        var row = Math.floor(y / (_frostCanvas.height / FROST_ROWS));
+        if (col < 0 || col >= FROST_COLS || row < 0 || row >= FROST_ROWS) return -1;
+        return row * FROST_COLS + col;
+    }
+
+    function frostOnMouseMove(e) {
+        if (!_frostActive || _frostGameOver) return;
+        if (!_frostCanvas) return;
+        var rect = _frostCanvas.getBoundingClientRect();
+        var mouseX = e.clientX - rect.left;
+        var mouseY = e.clientY - rect.top;
+        var tileCssW = rect.width / FROST_COLS;
+        var tileCssH = rect.height / FROST_ROWS;
+        var now = Date.now();
+        var HEAT_RADIUS = 150;
+        var HEAT_STRENGTH = 0.7; // max 70% melt per pass — need ~2 visits
+        for (var i = 0; i < FROST_TOTAL; i++) {
+            var col = i % FROST_COLS;
+            var row = Math.floor(i / FROST_COLS);
+            var cx = (col + 0.5) * tileCssW;
+            var cy = (row + 0.5) * tileCssH;
+            var dist = Math.sqrt((mouseX - cx) * (mouseX - cx) + (mouseY - cy) * (mouseY - cy));
+            if (dist >= HEAT_RADIUS) continue;
+            var heat = (1 - dist / HEAT_RADIUS) * HEAT_STRENGTH;
+            var warmTs = now - FROST_TIMEOUT * (1 - heat);
+            if (warmTs > _frostTiles[i]) {
+                _frostTiles[i] = warmTs;
+                _frostFrozen[i] = 0;
+            }
+        }
+    }
+
+    function frostRenderLoop() {
+        if (!_frostActive) return;
+        var now = Date.now();
+        var geo = frostGridGeometry();
+        var tw = geo.tileW;
+        var th = geo.tileH;
+
+        _frostCtx.clearRect(0, 0, _frostCanvas.width, _frostCanvas.height);
+
+        var frozenCount = 0;
+
+        for (var i = 0; i < FROST_TOTAL; i++) {
+            var age = now - _frostTiles[i];
+            if (age <= 0) continue; // fully warm — draw nothing
+            var col = i % FROST_COLS;
+            var row = Math.floor(i / FROST_COLS);
+            var x = col * tw;
+            var y = row * th;
+
+            if (age >= FROST_TIMEOUT) {
+                _frostFrozen[i] = 1;
+                frozenCount++;
+            }
+
+            // Smooth linear ramp: 0 → 0.8 over the full FROST_TIMEOUT
+            var progress = Math.min(age / FROST_TIMEOUT, 1);
+            var fillAlpha = progress * 0.8;
+            var strokeAlpha = Math.min(fillAlpha + 0.2, 1);
+            _frostCtx.fillStyle = "rgba(255, 255, 255, " + fillAlpha.toFixed(3) + ")";
+            _frostCtx.fillRect(x, y, tw, th);
+            _frostCtx.strokeStyle = "rgba(255, 255, 255, " + strokeAlpha.toFixed(3) + ")";
+            _frostCtx.lineWidth = 0.5;
+            _frostCtx.strokeRect(x + 0.25, y + 0.25, tw - 0.5, th - 0.5);
+        }
+
+        frostUpdateScore(FROST_TOTAL - frozenCount);
+
+        if (!_frostGameOver && frozenCount >= FROST_TOTAL) {
+            frostOnGameOver();
+        }
+
+        _frostAnimFrame = requestAnimationFrame(frostRenderLoop);
+    }
+
+    function frostUpdateScore(unfrozen) {
+        if (!_frostScoreEl) return;
+        if (_frostGameOver) return;
+        _frostScoreEl.textContent = unfrozen + " / " + FROST_TOTAL;
+    }
+
+    function frostOnGameOver() {
+        _frostGameOver = true;
+        if (_frostScoreEl) {
+            _frostScoreEl.textContent = "0 / " + FROST_TOTAL + " \u2014 TERMINATED";
+            _frostScoreEl.style.color = "#ef4444";
+        }
+    }
+
+    function frostResizeCanvas() {
+        if (!_frostCanvas) return;
+        var rect = _frostCanvas.getBoundingClientRect();
+        _frostCanvas.width = rect.width;
+        _frostCanvas.height = rect.height;
+    }
+
+    function initFrostGame() {
+        _frostCanvas = document.getElementById("frost-canvas");
+        _frostScoreEl = document.getElementById("frost-score");
+        if (!_frostCanvas) return;
+        _frostCtx = _frostCanvas.getContext("2d");
+
+        frostResizeCanvas();
+
+        var now = Date.now();
+        _frostTiles = new Float64Array(FROST_TOTAL);
+        _frostFrozen = new Uint8Array(FROST_TOTAL);
+        for (var i = 0; i < FROST_TOTAL; i++) {
+            _frostTiles[i] = now;
+            _frostFrozen[i] = 0;
+        }
+
+        _frostGameOver = false;
+        _frostActive = true;
+        if (_frostScoreEl) {
+            _frostScoreEl.style.color = "#fff";
+            _frostScoreEl.textContent = FROST_TOTAL + " / " + FROST_TOTAL;
+        }
+
+        _frostMoveHandler = frostOnMouseMove;
+        var screen = document.getElementById("worker-active-screen");
+        if (screen) screen.addEventListener("mousemove", _frostMoveHandler);
+
+        _frostResizeHandler = frostResizeCanvas;
+        window.addEventListener("resize", _frostResizeHandler);
+
+        _frostAnimFrame = requestAnimationFrame(frostRenderLoop);
+    }
+
+    function destroyFrostGame() {
+        _frostActive = false;
+        if (_frostAnimFrame) {
+            cancelAnimationFrame(_frostAnimFrame);
+            _frostAnimFrame = null;
+        }
+        if (_frostMoveHandler) {
+            var screen = document.getElementById("worker-active-screen");
+            if (screen) screen.removeEventListener("mousemove", _frostMoveHandler);
+            _frostMoveHandler = null;
+        }
+        if (_frostResizeHandler) {
+            window.removeEventListener("resize", _frostResizeHandler);
+            _frostResizeHandler = null;
+        }
+        if (_frostCanvas && _frostCtx) {
+            _frostCtx.clearRect(0, 0, _frostCanvas.width, _frostCanvas.height);
+        }
+        _frostCanvas = null;
+        _frostCtx = null;
+        _frostScoreEl = null;
+        _frostTiles = null;
+        _frostFrozen = null;
+        _frostGameOver = false;
     }
 
     // Audio playback — "latest wins" strategy (no FIFO queue)

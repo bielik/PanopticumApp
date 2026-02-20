@@ -1539,7 +1539,7 @@ body.worker-mode .video-container {
     font-size: 0.85rem;
     color: #fff;
     letter-spacing: 3px;
-    z-index: 25;
+    z-index: 9999;
     pointer-events: none;
 }
 
@@ -1553,7 +1553,7 @@ body.worker-mode .video-container {
     font-size: 0.85rem;
     color: #fff;
     letter-spacing: 3px;
-    z-index: 25;
+    z-index: 9999;
     pointer-events: none;
 }
 
@@ -1740,7 +1740,7 @@ body.worker-mode .video-container {
     justify-content: center;
     padding: 24px;
     position: relative;
-    z-index: 3;
+    z-index: 10;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
     animation: circle-pulse 2s ease-in-out infinite;
 }
@@ -1751,7 +1751,7 @@ body.worker-mode .video-container {
     left: 50%;
     transform: translateX(-50%);
     width: 160px;
-    z-index: 2;
+    z-index: 10;
 }
 
 .active-logo svg {
@@ -1785,6 +1785,31 @@ body.worker-mode .video-container {
 @keyframes active-cursor-blink {
     0%, 100% { border-right-color: #fff; }
     50% { border-right-color: transparent; }
+}
+
+/* --- Frost tile game (worker active screen) --- */
+#frost-canvas {
+    position: absolute;
+    top: 21px;
+    left: 21px;
+    right: 21px;
+    bottom: 21px;
+    width: calc(100% - 42px);
+    height: calc(100% - 42px);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.frost-score {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    z-index: 6;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    letter-spacing: 2px;
+    pointer-events: none;
 }
 
 /* --- Loading screen --- */

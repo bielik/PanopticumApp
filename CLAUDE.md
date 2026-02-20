@@ -182,9 +182,13 @@ pip install opencv-python numpy
 echo GEMINI_API_KEY=your_key > .env
 
 # Run:
-python main.py               # Local standalone
-uvicorn server:app --port 7860  # HF Spaces mode
+python main.py               # Local standalone → http://localhost:8000
+uvicorn server:app --port 7860  # HF Spaces mode → http://localhost:7860
 ```
+
+**Local URLs:**
+- **Lobby:** `http://localhost:8000/` (local) or `http://localhost:7860/` (HF mode)
+- **HuggingFace Spaces:** https://huggingface.co/spaces/MartinBLK/Panopticum
 
 ## Deployment (HuggingFace Spaces)
 
