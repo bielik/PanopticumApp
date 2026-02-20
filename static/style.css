@@ -44,6 +44,7 @@ body::after {
     height: 100vh;
     padding: 20px;
     gap: 20px;
+    background: transparent;
 }
 
 .video-panel {
@@ -63,8 +64,9 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #18181b;
-    border-radius: 16px;
+    background: #000;
+    border-radius: 2px;
+    border: 1px solid #fff;
     overflow: hidden;
 }
 
@@ -235,14 +237,14 @@ body::after {
 
 /* --- Controls panel --- */
 .controls {
-    background: #fff;
-    border-radius: 14px;
-    padding: 24px 32px;
+    background: transparent;
+    border: 1px solid #fff;
+    border-radius: 2px;
+    padding: 20px 24px;
     display: flex;
     align-items: center;
     gap: 20px 28px;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     flex-wrap: wrap;
 }
 
@@ -267,103 +269,105 @@ body::after {
 }
 
 .control-label {
-    font-size: 0.65rem;
-    font-weight: 600;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #8b8fa3;
-    padding-left: 6px;
+    color: #fff;
+    padding-left: 0;
 }
 
 /* --- Start/Stop button --- */
 .start-stop-btn {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 12px 32px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 400;
+    padding: 10px 24px;
     border: none;
-    border-radius: 10px;
+    border-radius: 2px;
     cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     transition: all 0.2s;
     flex-shrink: 0;
 }
 
 .start-stop-btn.inactive {
-    background: #4f46e5;
+    background: transparent;
     color: #fff;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+    border: 1px solid #fff;
 }
 
 .start-stop-btn.inactive:hover {
-    background: #4338ca;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
 }
 
 .start-stop-btn.active {
-    background: #ef4444;
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #ef4444;
 }
 
 .start-stop-btn.active:hover {
-    background: #dc2626;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
 }
 
 /* --- Worker link --- */
 .worker-link {
-    font-size: 0.65rem;
-    font-weight: 600;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #8b8fa3;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     padding: 8px 14px;
-    border-radius: 8px;
+    border-radius: 2px;
     transition: color 0.2s, background 0.2s;
     flex-shrink: 0;
 }
 
 .worker-link:hover {
-    color: #4f46e5;
-    background: #f0f1f5;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* --- Pill button group --- */
 .pill-group {
     display: flex;
-    background: #f0f1f5;
-    border-radius: 12px;
-    padding: 4px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    padding: 2px;
     gap: 2px;
 }
 
 .pill-btn {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.8rem;
-    font-weight: 500;
-    padding: 10px 22px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 400;
+    padding: 8px 18px;
     border: none;
-    border-radius: 9px;
+    border-radius: 2px;
     cursor: pointer;
     background: transparent;
-    color: #8b8fa3;
+    color: rgba(255, 255, 255, 0.7);
     transition: all 0.2s;
     white-space: nowrap;
+    letter-spacing: 1px;
 }
 
 .pill-btn:hover {
-    color: #374151;
-    background: rgba(255, 255, 255, 0.6);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .pill-btn.active {
     background: #fff;
-    color: #1a1a2e;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    font-weight: 600;
+    color: var(--lumon-dark);
+    font-weight: 400;
 }
 
 /* --- Slider controls --- */
@@ -371,8 +375,9 @@ body::after {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: #f0f1f5;
-    border-radius: 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
     padding: 8px 14px;
 }
 
@@ -382,8 +387,8 @@ body::after {
     width: 100px;
     min-width: 60px;
     height: 6px;
-    background: #d1d5db;
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
     outline: none;
     cursor: pointer;
 }
@@ -394,30 +399,30 @@ body::after {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #fff;
     cursor: pointer;
-    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
     transition: box-shadow 0.15s;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.5);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 .range-slider::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #fff;
     cursor: pointer;
     border: none;
-    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
 
 .slider-value {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #374151;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
     min-width: 52px;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -447,7 +452,7 @@ body::after {
 .sync-switch {
     width: 36px;
     height: 20px;
-    background: #d1d5db;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     position: relative;
     transition: background 0.2s;
@@ -467,7 +472,7 @@ body::after {
 }
 
 .sync-label input:checked + .sync-switch {
-    background: #4f46e5;
+    background: #fff;
 }
 
 .sync-label input:checked + .sync-switch::after {
@@ -475,9 +480,9 @@ body::after {
 }
 
 .sync-text {
-    font-size: 0.6rem;
-    font-weight: 500;
-    color: #8b8fa3;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
     text-transform: uppercase;
     letter-spacing: 1.5px;
 }
@@ -485,12 +490,12 @@ body::after {
 /* --- Message log panel --- */
 .message-log {
     width: 360px;
-    background: #fff;
-    border-radius: 16px;
+    background: transparent;
+    border: 1px solid #fff;
+    border-radius: 2px;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     overflow: hidden;
     transition: width 0.3s ease;
 }
@@ -504,12 +509,12 @@ body::after {
 
 .message-log-header {
     padding: 24px 28px 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #8b8fa3;
-    border-bottom: 1px solid #f0f1f5;
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -520,7 +525,7 @@ body::after {
     background: none;
     border: none;
     cursor: pointer;
-    color: #8b8fa3;
+    color: rgba(255, 255, 255, 0.7);
     font-size: 1.1rem;
     padding: 2px 4px;
     border-radius: 4px;
@@ -529,8 +534,8 @@ body::after {
 }
 
 .log-collapse-btn:hover {
-    color: #4f46e5;
-    background: #f0f1f5;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* Floating expand button (visible when log is collapsed) */
@@ -539,13 +544,12 @@ body::after {
     top: 20px;
     right: 20px;
     z-index: 50;
-    background: #fff;
-    border: none;
-    border-radius: 12px;
+    background: var(--lumon-sage);
+    border: 1px solid #fff;
+    border-radius: 2px;
     padding: 12px 14px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    color: #8b8fa3;
+    color: #fff;
     font-size: 1.1rem;
     line-height: 1;
     transition: color 0.2s, box-shadow 0.2s;
@@ -553,8 +557,8 @@ body::after {
 }
 
 .log-expand-btn:hover {
-    color: #4f46e5;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
 .log-expand-btn.visible {
@@ -570,26 +574,29 @@ body::after {
 .message-log-empty {
     padding: 40px 28px;
     text-align: center;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
-    color: #b0b4c3;
+    color: #fff;
+    opacity: 0.5;
 }
 
 .message-log-item {
     padding: 16px 28px;
-    border-bottom: 1px solid #f5f6f8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .message-log-item.latest {
-    background: #f5f3ff;
-    border-left: 3px solid #4f46e5;
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid #fff;
     padding-left: 25px;
 }
 
 .message-log-time {
     display: block;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.65rem;
-    font-weight: 500;
-    color: #b0b4c3;
+    color: #fff;
+    opacity: 0.6;
     margin-bottom: 6px;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5px;
@@ -608,30 +615,31 @@ body::after {
 }
 
 .tone-supportive {
-    background: #dbeafe;
-    color: #2563eb;
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
 }
 
 .tone-neutral {
-    background: #f0f1f5;
-    color: #8b8fa3;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
 }
 
 .tone-judgmental {
-    background: #fee2e2;
-    color: #dc2626;
+    background: rgba(220, 38, 38, 0.15);
+    color: #f87171;
 }
 
 .message-log-text {
     display: block;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
     line-height: 1.5;
-    color: #374151;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .message-log-item.latest .message-log-text {
-    font-weight: 600;
-    color: #1a1a2e;
+    font-weight: 400;
+    color: #fff;
 }
 
 .message-log-item.skipped .message-log-text {
@@ -646,27 +654,28 @@ body::after {
 }
 
 .action-request {
-    background: #fef3c7;
-    color: #b45309;
+    background: rgba(217, 119, 6, 0.2);
+    color: #fbbf24;
 }
 
 .action-completed {
-    background: #dcfce7;
-    color: #166534;
+    background: rgba(22, 101, 52, 0.2);
+    color: #4ade80;
 }
 
 .action-timeout {
-    background: #f3f4f6;
-    color: #6b7280;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    opacity: 0.5;
 }
 
 .message-log-item.action-entry {
-    border-left: 3px solid #d97706;
+    border-left: 3px solid #fbbf24;
 }
 
 .message-log-item.action-entry.latest {
-    border-left: 3px solid #d97706;
-    background: #fffbeb;
+    border-left: 3px solid #fbbf24;
+    background: rgba(251, 191, 36, 0.05);
 }
 
 .message-log-item.skipped .message-log-time::after {
@@ -681,7 +690,7 @@ body::after {
     gap: 16px;
     width: 100%;
     padding-top: 4px;
-    border-top: 1px solid #f0f1f5;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
     margin-top: 4px;
 }
 
@@ -693,26 +702,28 @@ body::after {
 }
 
 .action-phase-label {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
     padding: 4px 10px;
-    border-radius: 6px;
-    background: #f0f1f5;
-    color: #8b8fa3;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
     white-space: nowrap;
 }
 
 .action-phase-label.phase-requesting,
 .action-phase-label.phase-verifying {
-    background: #fef3c7;
-    color: #b45309;
+    background: rgba(217, 119, 6, 0.2);
+    color: #fbbf24;
 }
 
 .action-requested-text {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.8rem;
-    color: #374151;
+    color: #fff;
     font-style: italic;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -720,14 +731,14 @@ body::after {
 }
 
 .action-trigger-btn {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 400;
     padding: 8px 18px;
-    border: 2px solid #d97706;
-    border-radius: 8px;
+    border: 1px solid #fbbf24;
+    border-radius: 2px;
     background: transparent;
-    color: #d97706;
+    color: #fbbf24;
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -737,20 +748,20 @@ body::after {
 }
 
 .action-trigger-btn:hover {
-    background: #d97706;
-    color: #fff;
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
 }
 
 .action-trigger-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
-    border-color: #d1d5db;
-    color: #9ca3af;
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
 }
 
 .action-trigger-btn:disabled:hover {
     background: transparent;
-    color: #9ca3af;
+    color: #fff;
 }
 
 body.worker-mode .action-panel {
@@ -762,22 +773,21 @@ body.worker-mode .action-panel {
     display: flex;
     align-items: center;
     gap: 16px;
-    background: #fff;
-    border-radius: 12px;
+    background: transparent;
+    border: 1px solid #fff;
+    border-radius: 2px;
     padding: 12px 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
 }
 
 .source-status {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.75rem;
-    font-weight: 500;
-    color: #8b8fa3;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .source-status.is-source {
-    color: #059669;
-    font-weight: 600;
+    color: #fff;
 }
 
 .camera-select-wrap {
@@ -787,13 +797,13 @@ body.worker-mode .action-panel {
 }
 
 .camera-select {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.8rem;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
     padding: 6px 12px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-    color: #374151;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
     outline: none;
     cursor: pointer;
     max-width: 260px;
@@ -801,15 +811,15 @@ body.worker-mode .action-panel {
 }
 
 .camera-select:focus {
-    border-color: #4f46e5;
+    border-color: #fff;
 }
 
 /* --- Client panel --- */
 .client-panel {
-    background: #fff;
-    border-radius: 12px;
+    background: transparent;
+    border: 1px solid #fff;
+    border-radius: 2px;
     padding: 16px 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
 }
 
@@ -828,16 +838,17 @@ body.worker-mode .action-panel {
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    border-radius: 8px;
-    background: #f9fafb;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.8rem;
-    color: #374151;
+    color: #fff;
     transition: background 0.15s;
 }
 
 .client-item.active-source {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .client-item-role {
@@ -848,7 +859,8 @@ body.worker-mode .action-panel {
 
 .client-item-label {
     flex: 1;
-    color: #8b8fa3;
+    color: #fff;
+    opacity: 0.6;
     font-size: 0.75rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -860,8 +872,8 @@ body.worker-mode .action-panel {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #4f46e5;
-    background: #ede9fe;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
     padding: 2px 6px;
     border-radius: 4px;
 }
@@ -874,7 +886,7 @@ body.worker-mode .action-panel {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #059669;
+    color: #fff;
 }
 
 .client-source-badge::before {
@@ -882,18 +894,17 @@ body.worker-mode .action-panel {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #059669;
+    background: #fff;
 }
 
 .client-select-btn {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.65rem;
-    font-weight: 600;
     padding: 4px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    background: #fff;
-    color: #374151;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -902,14 +913,16 @@ body.worker-mode .action-panel {
 }
 
 .client-select-btn:hover {
-    background: #4f46e5;
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
-    border-color: #4f46e5;
+    border-color: #fff;
 }
 
 .client-list-empty {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.8rem;
-    color: #b0b4c3;
+    color: #fff;
+    opacity: 0.4;
     padding: 8px 0;
 }
 
@@ -977,8 +990,36 @@ body.worker-mode .action-panel {
     .message-log {
         width: 100%;
         max-height: 200px;
-        border-radius: 14px;
+        border-radius: 2px;
     }
+}
+
+/* --- Controller logo --- */
+.controller-logo {
+    position: fixed;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.controller-logo svg {
+    width: 100%;
+    height: auto;
+    fill: #fff;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.3));
+}
+
+/* --- Controller mode (non-worker) --- */
+body:not(.worker-mode) {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
+}
+
+body:not(.worker-mode):active {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23161E26' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 /* --- Worker mode --- */
@@ -1096,7 +1137,7 @@ body.worker-mode .video-container {
     font-size: clamp(3.5rem, 7vw, 5.5rem);
     font-weight: 700;
     letter-spacing: 2px;
-    color: #fff;
+    color: var(--lumon-dark);
     text-align: center;
     line-height: 1.3;
     margin-top: -80px;
@@ -1115,6 +1156,12 @@ body.worker-mode .video-container {
     width: 100%;
     max-width: 420px;
     margin-bottom: 24px;
+    opacity: 0;
+    transition: opacity 0.8s ease-in;
+}
+
+.worker-idle-id.visible {
+    opacity: 1;
 }
 
 .worker-idle-id label {
@@ -1167,27 +1214,25 @@ body.worker-mode .video-container {
 }
 
 .worker-idle-status {
+    position: fixed;
+    top: 125px;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    text-align: center;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: 0.85rem;
     color: #fff;
     letter-spacing: 3px;
     text-transform: uppercase;
-    overflow: hidden;
-    white-space: nowrap;
-    width: fit-content;
-    max-width: 0;
-    animation: idle-typewriter 2.5s steps(35) 0.5s forwards, idle-cursor-blink 0.6s step-end infinite;
-    border-right: 2px solid rgba(255, 255, 255, 0.7);
+    z-index: 25;
+    pointer-events: none;
+    animation: idle-blink 3s ease-in-out infinite;
 }
 
-@keyframes idle-typewriter {
-    0% { max-width: 0; }
-    100% { max-width: 100%; }
-}
-
-@keyframes idle-cursor-blink {
-    0%, 100% { border-right-color: rgba(255, 255, 255, 0.7); }
-    50% { border-right-color: transparent; }
+@keyframes idle-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
 }
 
 /* Circle cursor for idle screen inputs/buttons (inherit from body.worker-mode) */

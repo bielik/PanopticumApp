@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — Worker</title>
-    <link rel="stylesheet" href="/static/style.css?v=24">
+    <link rel="stylesheet" href="/static/style.css?v=26">
 </head>
 <body class="worker-mode">
     <!-- Hidden capture elements (needed when worker is camera source) -->
@@ -26,7 +26,7 @@
 
     <!-- Worker idle screen (Lumon theme) -->
     <div class="worker-idle-message" id="worker-idle-message" style="display:none">
-        <p class="worker-idle-slogan">Your productivity<br>is our priority.</p>
+        <p class="worker-idle-slogan" id="worker-idle-slogan"></p>
         <p class="worker-idle-room" id="idle-room-code"></p>
         <div class="worker-idle-id">
             <label>Worker Identification</label>
@@ -49,7 +49,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=26"></script>
+    <script src="/static/app.js?v=27"></script>
     <script>
         try {
             var c = document.createElement('canvas');

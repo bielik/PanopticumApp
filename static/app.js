@@ -58,18 +58,12 @@
     hideLoadingScreen();
 
     // --- Elements ---
-    var timestampEl = document.getElementById("timestamp");
-    var recDot = document.getElementById("rec-dot");
     var startStopBtn = document.getElementById("start-stop-btn");
     var messageLogList = document.getElementById("message-log-list");
-    var motivationalEl = document.getElementById("motivational-message");
-    var syncCheckbox = document.getElementById("sync-checkbox");
     var messageLogPanel = document.getElementById("message-log");
     var logCollapseBtn = document.getElementById("log-collapse-btn");
     var logExpandBtn = document.getElementById("log-expand-btn");
-    var cctvLyricsEl = document.getElementById("cctv-lyrics");
 
-    var effectPills = document.querySelectorAll("#effect-pills .pill-btn");
     var tonePills = document.querySelectorAll("#tone-pills .pill-btn");
 
     // Slider elements
@@ -77,12 +71,6 @@
     var frequencyValue = document.getElementById("frequency-value");
     var commentLengthSlider = document.getElementById("comment-length-slider");
     var commentLengthValue = document.getElementById("comment-length-value");
-
-    // Overlay elements
-    var overlayTop = document.querySelector(".overlay-top");
-    var camLabel = document.querySelector(".cam-label");
-    var scanlines = document.querySelector(".scanlines");
-    var vignette = document.querySelector(".vignette");
 
     // Camera elements (both controller and worker)
     var localVideo = document.getElementById("local-video");
@@ -113,9 +101,7 @@
 
     // --- State ---
     var isActive = false;
-    var currentEffect = "natural";
     var currentTone = "0.5";
-    var isSynced = true;
     var frameUploadInterval = null;
     var cameraStream = null;
     var isActiveSource = false;
@@ -124,17 +110,6 @@
     var currentActionPhase = "commenting";
     var currentFrequency = 8;
     var currentCommentLength = 10;
-
-    // --- CSS filter map for effects ---
-    var EFFECT_FILTERS = {
-        "insta": "sepia(0.4) brightness(1.1) saturate(1.2) contrast(1.05)",
-        "natural": "none",
-        "cctv": "grayscale(1) brightness(0.85) contrast(1.3)"
-    };
-
-    // --- Sync mapping ---
-    var EFFECT_TO_TONE = { "insta": "0", "natural": "0.5", "cctv": "1" };
-    var TONE_TO_EFFECT = { "0": "insta", "0.5": "natural", "1": "cctv" };
 
     // --- Message log ---
     var messageLog = [];
@@ -478,6 +453,45 @@
     }
 
     // =========================================================================
+    // Worker idle slogan typewriter
+    // =========================================================================
+    var _sloganTyped = false;
+
+    function startSloganTypewriter() {
+        var sloganEl = document.getElementById("worker-idle-slogan");
+        if (!sloganEl) return;
+        if (_sloganTyped) return;
+        _sloganTyped = true;
+        sloganEl.textContent = "";
+        var lines = ["Your productivity", "is our priority."];
+        var lineIdx = 0;
+        var charIdx = 0;
+
+        function typeNext() {
+            if (lineIdx >= lines.length) {
+                var idBox = document.querySelector(".worker-idle-id");
+                if (idBox) idBox.classList.add("visible");
+                return;
+            }
+            if (charIdx < lines[lineIdx].length) {
+                sloganEl.appendChild(document.createTextNode(lines[lineIdx][charIdx]));
+                charIdx++;
+                setTimeout(typeNext, 80);
+            } else {
+                lineIdx++;
+                charIdx = 0;
+                if (lineIdx < lines.length) {
+                    sloganEl.appendChild(document.createElement("br"));
+                    setTimeout(typeNext, 400);
+                } else {
+                    typeNext();
+                }
+            }
+        }
+        setTimeout(typeNext, 500);
+    }
+
+    // =========================================================================
     // Worker ID registration
     // =========================================================================
     function registerWorkerId() {
@@ -533,7 +547,10 @@
             if (workerActiveScreen) workerActiveScreen.style.display = "none";
             destroyActiveScreenRipples();
             clearActiveText();
-            if (workerIdleMessage) workerIdleMessage.style.display = "flex";
+            if (workerIdleMessage) {
+                workerIdleMessage.style.display = "flex";
+                startSloganTypewriter();
+            }
             if (workerStream) {
                 workerStream.src = "";
                 workerStream.style.display = "none";
