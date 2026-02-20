@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=44">
+    <link rel="stylesheet" href="/static/style.css?v=46">
 </head>
 <body class="controller-mode">
     <!-- Fixed clock + info -->
@@ -20,7 +20,7 @@
 
         <!-- Circle with live video -->
         <div class="ctrl-circle" id="ctrl-circle">
-            <canvas id="worker-stream-canvas" width="320" height="320" style="display:none"></canvas>
+            <canvas id="worker-stream-canvas" width="440" height="440" style="display:none"></canvas>
             <span class="ctrl-circle-status" id="ctrl-circle-status"></span>
         </div>
 
@@ -103,7 +103,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=44"></script>
+    <script src="/static/app.js?v=46"></script>
     <script>
         try {
             var c = document.createElement('canvas');

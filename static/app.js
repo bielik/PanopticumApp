@@ -152,7 +152,7 @@
     }
 
     function processAndDrawFrame(img) {
-        if (!_streamCanvas || !_streamCtx) return;
+        if (!_streamCanvas || !_streamCtx || !isActive) return;
 
         // Lazy-init tiny offscreen canvas
         if (!_pixelCanvas) {
@@ -468,12 +468,15 @@
         if (_sloganTyped) return;
         _sloganTyped = true;
         sloganEl.textContent = "";
+        sloganEl.classList.add("typing");
         var lines = ["Your productivity", "is our priority."];
         var lineIdx = 0;
         var charIdx = 0;
 
         function typeNext() {
             if (lineIdx >= lines.length) {
+                sloganEl.classList.remove("typing");
+                sloganEl.classList.add("typed");
                 var idBox = document.querySelector(".worker-idle-id");
                 if (idBox) idBox.classList.add("visible");
                 var statusText = document.getElementById("worker-idle-status-text");
@@ -1241,7 +1244,7 @@
         (function () {
             var el = document.getElementById("ctrl-circle-status");
             if (!el) return;
-            var text = "AWAITING SESSION INITIALIZATION";
+            var text = "Oversight is care.";
             var i = 0;
             function typeNext() {
                 if (i < text.length && !el.classList.contains("hidden")) {
