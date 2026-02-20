@@ -1058,10 +1058,6 @@ body.controller-mode::before {
     image-rendering: pixelated;
 }
 
-/* Reposition clock and logo for controller */
-body.controller-mode .worker-clock { top: 40px; }
-body.controller-mode .active-logo { bottom: 40px; }
-
 /* Cross dividers */
 .ctrl-divider-v-top,
 .ctrl-divider-v-bottom {
@@ -1437,7 +1433,7 @@ body.worker-mode .video-container {
 /* --- Worker fixed clock (visible in both idle and active modes) --- */
 .worker-clock {
     position: fixed;
-    top: 100px;
+    top: 40px;
     left: 0;
     right: 0;
     text-align: center;
@@ -1451,7 +1447,7 @@ body.worker-mode .video-container {
 
 .worker-info {
     position: fixed;
-    top: 122px;
+    top: 62px;
     left: 0;
     right: 0;
     text-align: center;
@@ -1462,8 +1458,6 @@ body.worker-mode .video-container {
     z-index: 25;
     pointer-events: none;
 }
-
-body.controller-mode .worker-info { top: 62px; }
 
 /* --- Worker idle screen (Lumon theme) --- */
 .worker-idle-message {
@@ -1495,7 +1489,7 @@ body.controller-mode .worker-info { top: 62px; }
 
 .worker-idle-logo {
     position: absolute;
-    bottom: 110px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     width: 160px;
@@ -1517,22 +1511,23 @@ body.controller-mode .worker-info { top: 62px; }
     line-height: 1.3;
     margin-top: -80px;
     margin-bottom: 40px;
-    border-right: 3px solid transparent;
 }
 
-.worker-idle-slogan.typing {
-    border-right-color: var(--lumon-dark);
-    animation: slogan-cursor-blink 0.6s step-end infinite;
-}
-
-.worker-idle-slogan.typed {
-    border-right-color: var(--lumon-dark);
+.worker-idle-slogan.typing::after,
+.worker-idle-slogan.typed::after {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 0.9em;
+    background: var(--lumon-dark);
+    margin-left: 2px;
+    vertical-align: baseline;
     animation: slogan-cursor-blink 0.6s step-end infinite;
 }
 
 @keyframes slogan-cursor-blink {
-    0%, 100% { border-right-color: currentColor; }
-    50% { border-right-color: transparent; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
 }
 
 
@@ -1654,7 +1649,7 @@ body.controller-mode .worker-info { top: 62px; }
 
 .active-logo {
     position: absolute;
-    bottom: 110px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     width: 160px;
@@ -1763,17 +1758,18 @@ body.lobby-mode::before {
     margin-bottom: 40px;
     position: relative;
     z-index: 3;
-    border-right: 3px solid transparent;
 }
 
-.lobby-slogan.typing {
+.lobby-slogan.typing::after,
+.lobby-slogan.typed::after {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 0.9em;
+    background: #fff;
+    margin-left: 2px;
+    vertical-align: baseline;
     animation: slogan-cursor-blink 0.6s step-end infinite;
-    border-right-color: #fff;
-}
-
-.lobby-slogan.typed {
-    animation: slogan-cursor-blink 0.6s step-end infinite;
-    border-right-color: #fff;
 }
 
 .lobby-frame {
@@ -1876,8 +1872,6 @@ body.lobby-mode::before {
     color: rgba(255, 255, 255, 0.7);
 }
 
-body.lobby-mode .worker-clock { top: 40px; }
-body.lobby-mode .active-logo { bottom: 40px; }
 
 @media (max-width: 480px) {
     .lobby-field {
