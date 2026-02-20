@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PANOPTICUM — {{ room_code }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=42">
+    <link rel="stylesheet" href="/static/style.css?v=44">
 </head>
 <body class="controller-mode">
     <!-- Fixed clock + info -->
@@ -21,11 +21,15 @@
         <!-- Circle with live video -->
         <div class="ctrl-circle" id="ctrl-circle">
             <canvas id="worker-stream-canvas" width="320" height="320" style="display:none"></canvas>
+            <span class="ctrl-circle-status" id="ctrl-circle-status"></span>
         </div>
 
         <!-- Cross dividers -->
-        <div class="ctrl-divider ctrl-divider-v"></div>
-        <div class="ctrl-divider ctrl-divider-h"></div>
+        <!-- Cross dividers split around circle -->
+        <div class="ctrl-divider ctrl-divider-v-top"></div>
+        <div class="ctrl-divider ctrl-divider-v-bottom"></div>
+        <div class="ctrl-divider ctrl-divider-h-left"></div>
+        <div class="ctrl-divider ctrl-divider-h-right"></div>
 
         <!-- Q1: Actions (top-left) -->
         <div class="ctrl-quadrant ctrl-q1">
@@ -99,7 +103,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=42"></script>
+    <script src="/static/app.js?v=44"></script>
     <script>
         try {
             var c = document.createElement('canvas');
@@ -114,14 +118,8 @@
                 interactive: true,
                 imageUrl: c.toDataURL()
             });
-            // Wave generator from below the circle
-            setInterval(function () {
-                var el = document.getElementById('ctrl-screen');
-                if (!el || !el.clientWidth) return;
-                var cx = el.clientWidth / 2;
-                var cy = el.clientHeight / 2;
-                $('#ctrl-screen').ripples('drop', cx, cy, 40, 0.6);
-            }, 2000);
+            // Wave generator — controlled by app.js via global
+            window._ctrlRipplesDrop = null;
         } catch (e) {
             console.log('Ripples not supported:', e);
         }

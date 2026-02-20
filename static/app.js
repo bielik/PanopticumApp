@@ -208,6 +208,26 @@
         }
     }
 
+    function startCtrlRipples() {
+        stopCtrlRipples();
+        if (!window.jQuery) return;
+        var el = document.getElementById("ctrl-screen");
+        if (!el) return;
+        window._ctrlRipplesDrop = setInterval(function () {
+            if (!el.clientWidth) return;
+            var cx = el.clientWidth / 2;
+            var cy = el.clientHeight / 2;
+            $("#ctrl-screen").ripples("drop", cx, cy, 40, 0.6);
+        }, 2000);
+    }
+
+    function stopCtrlRipples() {
+        if (window._ctrlRipplesDrop) {
+            clearInterval(window._ctrlRipplesDrop);
+            window._ctrlRipplesDrop = null;
+        }
+    }
+
     function startHeartbeat() {
         if (heartbeatTimer) return;
         heartbeatTimer = setInterval(function () {
@@ -1028,10 +1048,15 @@
         updateWorkerIdleState(data.active);
 
         if (MODE === "controller") {
+            var circle = document.getElementById("ctrl-circle");
             if (data.active) {
                 startSnapshotPolling();
+                startCtrlRipples();
+                if (circle) circle.classList.add("active");
             } else {
                 stopSnapshotPolling();
+                stopCtrlRipples();
+                if (circle) circle.classList.remove("active");
                 if (_streamCanvas && _streamCtx) {
                     _streamCtx.clearRect(0, 0, _streamCanvas.width, _streamCanvas.height);
                     _streamCanvas.style.display = "none";
@@ -1170,6 +1195,9 @@
             if (data.active) {
                 if (MODE === "controller") {
                     startSnapshotPolling();
+                    startCtrlRipples();
+                    var circle = document.getElementById("ctrl-circle");
+                    if (circle) circle.classList.add("active");
                 } else if (MODE === "worker" && isActiveSource) {
                     startCamera();
                     startFrameUpload();
@@ -1206,5 +1234,23 @@
 
     if (MODE === "worker") {
         setupWorker();
+    }
+
+    // Controller circle typewriter
+    if (MODE === "controller") {
+        (function () {
+            var el = document.getElementById("ctrl-circle-status");
+            if (!el) return;
+            var text = "AWAITING SESSION INITIALIZATION";
+            var i = 0;
+            function typeNext() {
+                if (i < text.length && !el.classList.contains("hidden")) {
+                    el.textContent += text[i];
+                    i++;
+                    setTimeout(typeNext, 60);
+                }
+            }
+            setTimeout(typeNext, 500);
+        })();
     }
 })();

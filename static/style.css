@@ -937,6 +937,16 @@ body:not(.worker-mode):active {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23161E26' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
+/* Override pointer cursor on clickable elements with white-filled circle */
+body:not(.worker-mode) button,
+body:not(.worker-mode) [class*="ctrl-option"],
+body:not(.worker-mode) [class*="ctrl-bar-slider"],
+body:not(.worker-mode) a,
+body:not(.worker-mode) [role="button"],
+body:not(.worker-mode) .message-log-item {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='rgba(255,255,255,0.5)' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
+}
+
 /* --- Controller redesigned layout --- */
 body.controller-mode::before {
     content: '';
@@ -973,16 +983,70 @@ body.controller-mode::before {
     transform: translate(-50%, -50%);
     z-index: 100;
     border: 1px solid rgba(255, 255, 255, 0.3);
+    background: #3d4d5c;
+    box-shadow: inset 4px 8px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ctrl-circle.active {
+    animation: none;
+    width: 320px;
+    height: 320px;
+    background: #3d4d5c;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: none;
+    isolation: isolate;
+}
+
+.ctrl-circle-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    letter-spacing: 3px;
+    text-align: center;
+    line-height: 1.6;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.ctrl-circle-status::after {
+    content: '';
+    display: inline-block;
+    width: 1px;
+    height: 1em;
     background: #fff;
-    animation: ctrl-circle-breathe 3s ease-in-out infinite;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: status-cursor-blink 0.6s step-end infinite;
 }
 
-@keyframes ctrl-circle-breathe {
-    0%, 100% { width: 280px; height: 280px; }
-    50% { width: 320px; height: 320px; }
+@keyframes status-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
 }
 
-.ctrl-circle::after {
+.ctrl-circle.active .ctrl-circle-status {
+    display: none;
+}
+
+.ctrl-circle.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #3d4d5c;
+    mix-blend-mode: overlay;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.ctrl-circle.active::after {
     content: '';
     position: absolute;
     top: 0;
@@ -1011,24 +1075,42 @@ body.controller-mode .worker-clock { top: 40px; }
 body.controller-mode .active-logo { bottom: 40px; }
 
 /* Cross dividers */
-.ctrl-divider-v {
+.ctrl-divider-v-top,
+.ctrl-divider-v-bottom {
     position: fixed;
     left: 50%;
-    top: 95px;
-    bottom: 145px;
     width: 1px;
     background: rgba(255, 255, 255, 0.3);
     z-index: 50;
 }
 
-.ctrl-divider-h {
+.ctrl-divider-v-top {
+    top: 95px;
+    bottom: calc(50% + 160px);
+}
+
+.ctrl-divider-v-bottom {
+    top: calc(50% + 160px);
+    bottom: 145px;
+}
+
+.ctrl-divider-h-left,
+.ctrl-divider-h-right {
     position: fixed;
     top: 50%;
-    left: 21px;
-    right: 21px;
     height: 1px;
     background: rgba(255, 255, 255, 0.3);
     z-index: 50;
+}
+
+.ctrl-divider-h-left {
+    left: 21px;
+    right: calc(50% + 160px);
+}
+
+.ctrl-divider-h-right {
+    left: calc(50% + 160px);
+    right: 21px;
 }
 
 /* Base quadrant */
@@ -1254,15 +1336,23 @@ body.controller-mode .active-logo { bottom: 40px; }
 .ctrl-action-btn.inactive {
     border-color: rgba(255, 255, 255, 0.4);
     color: #fff;
+    animation: btn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes btn-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    50% { box-shadow: 0 0 12px 2px rgba(255, 255, 255, 0.3); }
 }
 
 .ctrl-action-btn.active {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: #fff;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
 }
 
 .ctrl-action-btn.active:hover {
-    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.15);
 }
 
 .ctrl-action-btn:disabled {
