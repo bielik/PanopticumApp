@@ -48,8 +48,19 @@
                 </div>
             </div>
 
-            <!-- Q3: Settings (bottom-left) -->
+            <!-- Q3: App Status (bottom-left) -->
             <div class="ctrl-quadrant ctrl-q3">
+                <div class="ctrl-q-header">App Status</div>
+                <div class="ctrl-action-status">
+                    <span class="action-phase-label" id="action-phase-label">Commenting</span>
+                    <span class="action-requested-text" id="action-requested-text"></span>
+                </div>
+                <span class="ctrl-label">Connected Devices</span>
+                <div id="client-list" class="client-list"></div>
+            </div>
+
+            <!-- Q4: Settings (bottom-right) -->
+            <div class="ctrl-quadrant ctrl-q4">
                 <div class="ctrl-q-header">Settings</div>
                 <div class="ctrl-group">
                     <span class="ctrl-label">Action Mode</span>
@@ -85,17 +96,14 @@
                         <input type="range" id="comment-length-slider" min="3" max="50" step="1" value="10" style="display:none">
                     </div>
                 </div>
-            </div>
-
-            <!-- Q4: App Status (bottom-right) -->
-            <div class="ctrl-quadrant ctrl-q4">
-                <div class="ctrl-q-header">App Status</div>
-                <div class="ctrl-action-status">
-                    <span class="action-phase-label" id="action-phase-label">Commenting</span>
-                    <span class="action-requested-text" id="action-requested-text"></span>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">Heat Strength</span>
+                    <div class="ctrl-bar-slider" id="heat-strength-bar">
+                        <div class="ctrl-bar-fill" id="heat-strength-fill"></div>
+                        <span class="ctrl-bar-text" id="heat-strength-value">70%</span>
+                        <input type="range" id="heat-strength-slider" min="10" max="100" step="5" value="70" style="display:none">
+                    </div>
                 </div>
-                <span class="ctrl-label">Connected Devices</span>
-                <div id="client-list" class="client-list"></div>
             </div>
         </div>
     </div>
@@ -106,7 +114,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=47"></script>
+    <script src="/static/app.js?v=48"></script>
     <script>
         try {
             var c = document.createElement('canvas');

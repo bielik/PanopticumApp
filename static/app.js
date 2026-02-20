@@ -71,6 +71,8 @@
     var frequencyValue = document.getElementById("frequency-value");
     var commentLengthSlider = document.getElementById("comment-length-slider");
     var commentLengthValue = document.getElementById("comment-length-value");
+    var heatStrengthSlider = document.getElementById("heat-strength-slider");
+    var heatStrengthValue = document.getElementById("heat-strength-value");
 
     // Camera elements (worker only — controller no longer captures video)
     var localVideo = document.getElementById("local-video");
@@ -676,7 +678,7 @@
     var FROST_ROWS = 8;
     var FROST_TOTAL = FROST_COLS * FROST_ROWS;
     var FROST_TIMEOUT = 20000;
-
+    var _frostHeatStrength = 0.7;
 
     var _frostTiles = null;    // Float64Array — last-hover timestamp per tile
     var _frostFrozen = null;   // Uint8Array — 0=warm, 1=frozen
@@ -719,7 +721,7 @@
         var tileCssH = rect.height / FROST_ROWS;
         var now = Date.now();
         var HEAT_RADIUS = 150;
-        var HEAT_STRENGTH = 0.7; // max 70% melt per pass — need ~2 visits
+        var HEAT_STRENGTH = _frostHeatStrength;
         for (var i = 0; i < FROST_TOTAL; i++) {
             var col = i % FROST_COLS;
             var row = Math.floor(i / FROST_COLS);
@@ -1088,6 +1090,25 @@
     initBarSlider(document.getElementById("frequency-bar"), frequencySlider);
     initBarSlider(document.getElementById("comment-length-bar"), commentLengthSlider);
 
+    // Heat strength slider
+    function updateHeatStrengthLabel(pct) {
+        if (heatStrengthValue) heatStrengthValue.textContent = pct + "%";
+    }
+    if (heatStrengthSlider) {
+        heatStrengthSlider.addEventListener("input", function () {
+            updateHeatStrengthLabel(parseInt(heatStrengthSlider.value, 10));
+        });
+        heatStrengthSlider.addEventListener("change", function () {
+            var pct = parseInt(heatStrengthSlider.value, 10);
+            fetch(API + "/heat-strength", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: pct / 100 }),
+            }).catch(function (err) { console.warn("Heat strength error:", err); });
+        });
+    }
+    initBarSlider(document.getElementById("heat-strength-bar"), heatStrengthSlider);
+
     // =========================================================================
     // Message log
     // =========================================================================
@@ -1331,6 +1352,15 @@
         if (commentLengthSlider) {
             commentLengthSlider.value = words;
             commentLengthSlider.dispatchEvent(new Event("input"));
+        }
+    });
+
+    evtSource.addEventListener("heat_strength", function (e) {
+        var data = JSON.parse(e.data);
+        _frostHeatStrength = data.value;
+        if (heatStrengthSlider) {
+            heatStrengthSlider.value = Math.round(data.value * 100);
+            heatStrengthSlider.dispatchEvent(new Event("input"));
         }
     });
 

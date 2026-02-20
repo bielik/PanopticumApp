@@ -88,8 +88,10 @@ class Room:
     # Frequency & comment length (runtime-adjustable)
     analysis_interval: float = 8.0          # seconds between cycles (neutral default)
     comment_length: int = 10                # target word count
+    heat_strength: float = 0.7              # frost game: cursor melt strength (0.1–1.0)
     _frequency_version: int = 0
     _comment_length_version: int = 0
+    _heat_strength_version: int = 0
 
     # Audio files: timestamp -> mp3 bytes
     audio_files: dict = field(default_factory=dict)

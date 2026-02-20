@@ -792,6 +792,7 @@ body.worker-mode .action-panel {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-width: 300px;
 }
 
 .client-item {

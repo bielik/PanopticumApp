@@ -254,6 +254,9 @@ class FrequencyRequest(BaseModel):
 class CommentLengthRequest(BaseModel):
     value: int
 
+class HeatStrengthRequest(BaseModel):
+    value: float
+
 
 @app.get("/room/{code}/api/status")
 async def room_status(code: str):
@@ -379,6 +382,19 @@ async def room_set_comment_length(code: str, req: CommentLengthRequest):
     room._comment_length_version += 1
     room.touch()
     log.info(f"[{code}] Comment length: {value} words")
+    return {"value": value}
+
+
+@app.post("/room/{code}/api/heat-strength")
+async def room_set_heat_strength(code: str, req: HeatStrengthRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    value = max(0.1, min(1.0, req.value))
+    room.heat_strength = value
+    room._heat_strength_version += 1
+    room.touch()
+    log.info(f"[{code}] Heat strength: {value:.0%}")
     return {"value": value}
 
 
@@ -566,6 +582,7 @@ async def _sse_generator(room: Room):
     last_action_phase_version = -1
     last_frequency_version = -1
     last_comment_length_version = -1
+    last_heat_strength_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -634,6 +651,13 @@ async def _sse_generator(room: Room):
             last_comment_length_version = cl_version
             events.append(("comment_length", json.dumps({
                 "value": room.comment_length,
+            })))
+
+        hs_version = room._heat_strength_version
+        if hs_version != last_heat_strength_version:
+            last_heat_strength_version = hs_version
+            events.append(("heat_strength", json.dumps({
+                "value": room.heat_strength,
             })))
 
         # Emit audio events for any new audio files (decoupled from description timing)
