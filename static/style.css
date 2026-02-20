@@ -1383,6 +1383,74 @@ body.controller-mode::before {
     border-radius: 0;
 }
 
+/* --- Controller responsive: stack quadrants vertically on small screens --- */
+@media (max-width: 899px), (max-height: 899px) {
+    /* Hide decorative elements */
+    .ctrl-circle {
+        display: none;
+    }
+
+    .ctrl-divider-v-top,
+    .ctrl-divider-v-bottom,
+    .ctrl-divider-h-left,
+    .ctrl-divider-h-right {
+        display: none;
+    }
+
+    /* Convert screen to scrollable flex column */
+    .ctrl-screen {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+        padding: 90px 40px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Stack quadrants as flow elements */
+    .ctrl-quadrant {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        overflow-y: visible;
+    }
+
+    /* Stack order: Q1 Actions, Q3 Settings, Q4 App Status, Q2 Activity Log */
+    .ctrl-q1 { order: 1; padding: 20px; }
+    .ctrl-q2 { order: 4; padding: 20px; }
+    .ctrl-q3 { order: 2; padding: 20px; }
+    .ctrl-q4 { order: 3; padding: 20px; }
+
+    /* Reset right-aligned quadrants */
+    .ctrl-q2,
+    .ctrl-q4 {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    /* Activity log: let it flow but cap height */
+    .ctrl-q2 {
+        overflow: visible;
+    }
+
+    .ctrl-q2 .message-log-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+
+    /* Logo: static centered at top */
+    .active-logo {
+        position: static;
+        transform: none;
+        margin: 0 auto 20px;
+    }
+}
+
 /* --- Worker mode --- */
 body.worker-mode {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23161E26' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
