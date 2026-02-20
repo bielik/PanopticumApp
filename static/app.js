@@ -156,9 +156,6 @@
             workerStream.src = "/room/" + ROOM + "/stream";
             workerStream.style.display = "";
         }
-        if (localVideo) {
-            localVideo.style.display = "none";
-        }
         if (ctrlVideo) {
             ctrlVideo.style.display = "none";
         }
@@ -207,10 +204,6 @@
             cameraStream = stream;
             if (localVideo) {
                 localVideo.srcObject = stream;
-                // Only show localVideo if there's no ctrl-video circle (worker page)
-                if (!ctrlVideo) {
-                    localVideo.style.display = "";
-                }
             }
             if (ctrlVideo) {
                 ctrlVideo.srcObject = stream;
@@ -323,7 +316,6 @@
             // I lost source status — stop camera, show MJPEG stream
             stopFrameUpload();
             stopCamera();
-            if (localVideo) localVideo.style.display = "none";
             if (ctrlCanvas) ctrlCanvas.style.display = "none";
             showMjpegStream();
         }
@@ -570,7 +562,6 @@
                 workerStream.src = "";
                 workerStream.style.display = "none";
             }
-            if (localVideo) localVideo.style.display = "none";
         }
     }
 
@@ -923,8 +914,11 @@
         return "";
     }
 
-    function renderMessageLog() {
+    var _logTypeTimer = null;
+
+    function renderMessageLog(animate) {
         if (!messageLogList) return;
+        if (_logTypeTimer) { clearTimeout(_logTypeTimer); _logTypeTimer = null; }
         if (messageLog.length === 0) {
             messageLogList.innerHTML = '<div class="message-log-empty">Waiting for observations...</div>';
             return;
@@ -941,10 +935,31 @@
             }
             html += '<div class="' + cls + '">';
             html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + actionTag(msg.descType) + '</span>';
-            html += '<span class="message-log-text">' + escapeHtml(msg.text) + '</span>';
+            html += '<span class="message-log-text">' + (i === 0 && animate ? '' : escapeHtml(msg.text)) + '</span>';
             html += '</div>';
         }
         messageLogList.innerHTML = html;
+        if (animate && messageLog.length > 0) {
+            typeLogEntry(messageLog[0].text);
+        }
+    }
+
+    function typeLogEntry(text) {
+        var el = messageLogList.querySelector(".message-log-item.latest .message-log-text");
+        if (!el) return;
+        var chars = text.split("");
+        var ci = 0;
+        el.classList.add("typing");
+        function typeNext() {
+            if (ci < chars.length) {
+                el.textContent += chars[ci];
+                ci++;
+                _logTypeTimer = setTimeout(typeNext, 40);
+            } else {
+                el.classList.remove("typing");
+            }
+        }
+        typeNext();
     }
 
     function escapeHtml(text) {
@@ -967,7 +982,7 @@
             descType: descType || "commentary",
         });
         if (messageLog.length > MAX_LOG_MESSAGES) messageLog.pop();
-        renderMessageLog();
+        renderMessageLog(true);
     }
 
     // =========================================================================
@@ -1200,10 +1215,8 @@
     setupUnregister();
 
     if (MODE === "controller") {
-        // Hide video; MJPEG stream starts after registration confirms source status
-        if (localVideo) {
-            localVideo.style.display = "none";
-        }
+        // localVideo stays visually hidden via inline CSS (opacity:0, position:absolute)
+        // MJPEG stream starts after registration confirms source status
     } else if (MODE === "worker") {
         setupWorker();
     }

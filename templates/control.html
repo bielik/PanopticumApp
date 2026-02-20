@@ -8,7 +8,7 @@
 </head>
 <body class="controller-mode">
     <!-- Hidden capture elements -->
-    <video id="local-video" autoplay playsinline muted style="display:none"></video>
+    <video id="local-video" autoplay playsinline muted style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
     <canvas id="capture-canvas" style="display:none"></canvas>
 
     <!-- Fixed clock -->
@@ -107,7 +107,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=30"></script>
+    <script src="/static/app.js?v=33"></script>
     <script>
         try {
             var c = document.createElement('canvas');

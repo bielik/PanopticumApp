@@ -640,6 +640,17 @@ body::after {
     font-weight: 700;
     opacity: 1;
     text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    border-right: 2px solid transparent;
+}
+
+.message-log-item.latest .message-log-text.typing {
+    border-right-color: #fff;
+    animation: log-cursor-blink 0.6s step-end infinite;
+}
+
+@keyframes log-cursor-blink {
+    0%, 100% { border-right-color: #fff; }
+    50% { border-right-color: transparent; }
 }
 
 .message-log-item.skipped .message-log-text {
@@ -1174,6 +1185,7 @@ body.controller-mode .active-logo { bottom: 40px; }
     text-transform: uppercase;
     letter-spacing: 2px;
     color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 8px;
 }
 
 /* Quadrant scrollbars */
