@@ -812,7 +812,8 @@
     function frostUpdateScore(unfrozen) {
         if (!_frostScoreEl) return;
         if (_frostGameOver) return;
-        _frostScoreEl.textContent = unfrozen + " / " + FROST_TOTAL;
+        var heatPct = Math.round(_frostHeatStrength * 100);
+        _frostScoreEl.textContent = unfrozen + " / " + FROST_TOTAL + "  heat:" + heatPct + "%";
     }
 
     function frostOnGameOver() {
@@ -1385,8 +1386,10 @@
         }
     });
 
+    console.log("[SSE] heat_strength listener registered");
     evtSource.addEventListener("heat_strength", function (e) {
         var data = JSON.parse(e.data);
+        console.log("[SSE] heat_strength received:", data.value, "old:", _frostHeatStrength);
         _frostHeatStrength = data.value;
         if (heatStrengthSlider) {
             heatStrengthSlider.value = Math.round(data.value * 100);

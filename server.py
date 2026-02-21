@@ -656,6 +656,7 @@ async def _sse_generator(room: Room):
         hs_version = room._heat_strength_version
         if hs_version != last_heat_strength_version:
             last_heat_strength_version = hs_version
+            log.info(f"[SSE] Emitting heat_strength={room.heat_strength} (v{hs_version})")
             events.append(("heat_strength", json.dumps({
                 "value": room.heat_strength,
             })))
