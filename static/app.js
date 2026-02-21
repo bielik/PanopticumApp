@@ -690,6 +690,10 @@
     var _frostGameOver = false;
     var _frostMoveHandler = null;
     var _frostResizeHandler = null;
+    var _frostMouseX = -9999;
+    var _frostMouseY = -9999;
+    var _frostLastFrame = 0;
+    var _frostDebug = false;  // toggle: window._frostDebug = true in console
 
     function frostGridGeometry() {
         if (!_frostCanvas) return { tileW: 0, tileH: 0 };
@@ -715,27 +719,8 @@
         if (!_frostActive || _frostGameOver) return;
         if (!_frostCanvas) return;
         var rect = _frostCanvas.getBoundingClientRect();
-        var mouseX = e.clientX - rect.left;
-        var mouseY = e.clientY - rect.top;
-        var tileCssW = rect.width / FROST_COLS;
-        var tileCssH = rect.height / FROST_ROWS;
-        var now = Date.now();
-        var HEAT_RADIUS = 150;
-        var HEAT_STRENGTH = _frostHeatStrength;
-        for (var i = 0; i < FROST_TOTAL; i++) {
-            var col = i % FROST_COLS;
-            var row = Math.floor(i / FROST_COLS);
-            var cx = (col + 0.5) * tileCssW;
-            var cy = (row + 0.5) * tileCssH;
-            var dist = Math.sqrt((mouseX - cx) * (mouseX - cx) + (mouseY - cy) * (mouseY - cy));
-            if (dist >= HEAT_RADIUS) continue;
-            var heat = (1 - dist / HEAT_RADIUS) * HEAT_STRENGTH;
-            var warmTs = now - FROST_TIMEOUT * (1 - heat);
-            if (warmTs > _frostTiles[i]) {
-                _frostTiles[i] = warmTs;
-                _frostFrozen[i] = 0;
-            }
-        }
+        _frostMouseX = e.clientX - rect.left;
+        _frostMouseY = e.clientY - rect.top;
     }
 
     function frostRenderLoop() {
@@ -746,6 +731,36 @@
         var th = geo.tileH;
 
         _frostCtx.clearRect(0, 0, _frostCanvas.width, _frostCanvas.height);
+
+        // Apply heat: push timestamps forward (kills dead zone) + cap age (holds frost level)
+        var dt = _frostLastFrame > 0 ? now - _frostLastFrame : 0;
+        _frostLastFrame = now;
+        var dbg = window._frostDebug;
+        var heatMap = dbg ? new Float32Array(FROST_TOTAL) : null;
+
+        if (_frostMouseX > -9000) {
+            var rect = _frostCanvas.getBoundingClientRect();
+            var tileCssW = rect.width / FROST_COLS;
+            var tileCssH = rect.height / FROST_ROWS;
+            var HEAT_RADIUS = 150;
+            for (var i = 0; i < FROST_TOTAL; i++) {
+                var col = i % FROST_COLS;
+                var row = Math.floor(i / FROST_COLS);
+                var cx = (col + 0.5) * tileCssW;
+                var cy = (row + 0.5) * tileCssH;
+                var dist = Math.sqrt((_frostMouseX - cx) * (_frostMouseX - cx) + (_frostMouseY - cy) * (_frostMouseY - cy));
+                if (dist >= HEAT_RADIUS) continue;
+                var heat = (1 - dist / HEAT_RADIUS) * _frostHeatStrength;
+                if (heatMap) heatMap[i] = heat;
+                // Push timestamp forward to slow aging (works from frame 1)
+                _frostTiles[i] = Math.min(now, _frostTiles[i] + heat * dt);
+                // Cap: tile can't age past maxAge while under heat
+                var maxAge = FROST_TIMEOUT * (1 - heat);
+                var minTs = now - maxAge;
+                if (_frostTiles[i] < minTs) _frostTiles[i] = minTs;
+                if (now - _frostTiles[i] < FROST_TIMEOUT) _frostFrozen[i] = 0;
+            }
+        }
 
         var frozenCount = 0;
 
@@ -771,6 +786,18 @@
             _frostCtx.strokeStyle = "rgba(255, 255, 255, " + strokeAlpha.toFixed(3) + ")";
             _frostCtx.lineWidth = 0.5;
             _frostCtx.strokeRect(x + 0.25, y + 0.25, tw - 0.5, th - 0.5);
+
+            // Debug overlay: per-tile age and heat
+            if (dbg) {
+                var ageS = _frostFrozen[i] ? "F" : (age / 1000).toFixed(1) + "s";
+                var heatVal = heatMap ? heatMap[i] : 0;
+                _frostCtx.font = "9px monospace";
+                _frostCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                _frostCtx.fillText(ageS, x + 2, y + 10);
+                if (heatVal > 0) {
+                    _frostCtx.fillText("h:" + heatVal.toFixed(1), x + 2, y + 20);
+                }
+            }
         }
 
         frostUpdateScore(FROST_TOTAL - frozenCount);
@@ -860,6 +887,9 @@
         _frostTiles = null;
         _frostFrozen = null;
         _frostGameOver = false;
+        _frostMouseX = -9999;
+        _frostMouseY = -9999;
+        _frostLastFrame = 0;
     }
 
     // Audio playback — "latest wins" strategy (no FIFO queue)
