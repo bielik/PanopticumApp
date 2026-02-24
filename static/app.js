@@ -469,12 +469,12 @@
     function updateWorkerInfo() {
         if (!workerInfoEl) return;
         var parts = [];
-        if (ROOM) parts.push('<a href="/" class="room-link">ROOM:</a> <span class="room-code-copy">' + escapeHtml(ROOM) + '</span>');
+        if (ROOM) parts.push('<a href="/" class="room-link">ROOM:</a> <span class="room-code-copy clickable">' + escapeHtml(ROOM) + '</span>');
         if (MODE === "controller") {
             parts.push("WORKER: " + escapeHtml(_workerLabel || "NOT CONNECTED"));
         } else {
             if (STORED_WORKER_ID) {
-                parts.push('ID: <span class="worker-id-edit">' + escapeHtml(STORED_WORKER_ID) + '</span>');
+                parts.push('ID: <span class="worker-id-edit clickable">' + escapeHtml(STORED_WORKER_ID) + '</span>');
             } else {
                 parts.push("ID: NOT REGISTERED");
             }

@@ -98,7 +98,12 @@ Key points:
 - Max 2 font sizes per page: one Display heading + 0.85rem body
 - Background: `--lumon-sage` (`#7a9a86`) for public pages, `--lumon-dark` for controller
 - Accent: `--lumon-green-deep` (`#213525`) for interactive elements on light backgrounds
-- Custom circle cursor (`--lumon-dark`) on idle/lobby screens
+- **Custom circle cursors** — three states, all inline SVG data URIs:
+  - **Default**: outline circle (dark stroke on controller/worker, white stroke on lobby)
+  - **Hover on clickable**: white stroke circle with soft glow halo (concentric translucent layers)
+  - **Click (`:active`)**: solid white filled circle with white stroke + glow
+  - Global rules per body mode (`body:not(.worker-mode)`, `body.worker-mode`, `body.lobby-mode`) cover all standard interactive elements (`button`, `a`, `select`, `label`, `summary`, `[role="button"]`, `[tabindex]`, `[onclick]`). For custom clickable spans/divs, add the `.clickable` CSS class.
+  - **Never use `cursor: pointer`** in this codebase — it overrides the custom cursors
 - Vignette overlay on sage backgrounds
 - WebGL ripple effect on worker idle screen (`jquery.ripples.js` + jQuery)
 - Video overlay effects (CCTV neon green, Insta sepia) are artistic exceptions to the color rules
