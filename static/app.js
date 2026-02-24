@@ -469,15 +469,32 @@
     function updateWorkerInfo() {
         if (!workerInfoEl) return;
         var parts = [];
-        if (ROOM) parts.push("ROOM: " + ROOM);
+        if (ROOM) parts.push('<a href="/" class="room-link">ROOM:</a> <span class="room-code-copy">' + escapeHtml(ROOM) + '</span>');
         if (MODE === "controller") {
-            parts.push("WORKER: " + (_workerLabel || "NOT CONNECTED"));
+            parts.push("WORKER: " + escapeHtml(_workerLabel || "NOT CONNECTED"));
         } else {
-            parts.push("ID: " + (STORED_WORKER_ID || "NOT REGISTERED"));
+            parts.push("ID: " + escapeHtml(STORED_WORKER_ID || "NOT REGISTERED"));
         }
-        workerInfoEl.textContent = parts.join("  /  ");
+        workerInfoEl.innerHTML = parts.join("  /  ");
     }
     updateWorkerInfo();
+
+    // Click-to-copy room code
+    if (workerInfoEl) {
+        workerInfoEl.addEventListener("click", function (e) {
+            var target = e.target;
+            if (!target.classList.contains("room-code-copy")) return;
+            navigator.clipboard.writeText(ROOM).then(function () {
+                var tip = document.createElement("span");
+                tip.className = "copy-tooltip";
+                tip.textContent = "Copied!";
+                tip.style.left = (e.clientX + 10) + "px";
+                tip.style.top = (e.clientY + 15) + "px";
+                document.body.appendChild(tip);
+                setTimeout(function () { tip.remove(); }, 1500);
+            });
+        });
+    }
 
     // Populate room code on idle screen
     if (idleRoomCodeEl && ROOM) {

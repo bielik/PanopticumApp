@@ -1578,6 +1578,45 @@ body.worker-mode .video-container {
     pointer-events: none;
 }
 
+.room-link,
+.room-code-copy {
+    pointer-events: auto;
+}
+
+.room-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.room-link:hover {
+    color: #fff;
+}
+
+.room-code-copy {
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.room-code-copy:hover {
+    color: #fff;
+}
+
+.copy-tooltip {
+    position: fixed;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #fff;
+    pointer-events: none;
+    z-index: 9999;
+    animation: copy-fade 1.5s ease forwards;
+}
+
+@keyframes copy-fade {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
 /* --- Worker idle screen (Lumon theme) --- */
 .worker-idle-message {
     width: 100vw;
