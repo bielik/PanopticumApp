@@ -629,9 +629,9 @@
     }
 
     function irisTransition(toActive, onSwap, onComplete) {
-        var CLOSE_DURATION = 700;
-        var PAUSE_DURATION = 100;
-        var OPEN_DURATION = 700;
+        var CLOSE_DURATION = 3000;
+        var PAUSE_DURATION = 1000;
+        var OPEN_DURATION = 3000;
 
         var outgoingContainer = toActive ? workerIdleMessage : workerActiveScreen;
         var incomingContainer = toActive ? workerActiveScreen : workerIdleMessage;
@@ -648,9 +648,34 @@
 
         _irisAnimating = true;
 
+        // Debug ring overlay
+        var ring = document.getElementById("iris-debug-ring");
+        if (!ring) {
+            ring = document.createElement("div");
+            ring.id = "iris-debug-ring";
+            ring.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;pointer-events:none";
+            ring.innerHTML = '<svg width="100%" height="100%" style="position:absolute;top:0;left:0"><circle id="iris-debug-circle" cx="0" cy="0" r="0" fill="none" stroke="white" stroke-width="1"/></svg>';
+            document.body.appendChild(ring);
+        }
+        var debugCircle = document.getElementById("iris-debug-circle");
+        function updateDebugRing(r, opacity) {
+            if (debugCircle) {
+                debugCircle.setAttribute("cx", cx);
+                debugCircle.setAttribute("cy", cy);
+                debugCircle.setAttribute("r", Math.max(0, r));
+                debugCircle.setAttribute("stroke-opacity", opacity !== undefined ? opacity : 1);
+            }
+        }
+        function hideDebugRing() {
+            if (debugCircle) {
+                debugCircle.setAttribute("r", "0");
+                debugCircle.setAttribute("stroke-opacity", "0");
+            }
+        }
+
         var startTime = null;
         function animateClose(timestamp) {
-            if (!_irisAnimating) return;
+            if (!_irisAnimating) { hideDebugRing(); return; }
             if (!startTime) startTime = timestamp;
             var elapsed = timestamp - startTime;
             var progress = Math.min(elapsed / CLOSE_DURATION, 1);
@@ -658,14 +683,17 @@
             var radius = maxR * (1 - eased);
 
             outgoingContent.style.clipPath = "circle(" + radius + "px at " + cx + "px " + cy + "px)";
+            var ringOpacity = progress < 0.4 ? 0 : (progress - 0.4) / 0.6;
+            updateDebugRing(radius, ringOpacity);
 
             if (progress < 1) {
                 requestAnimationFrame(animateClose);
             } else {
                 outgoingContent.style.clipPath = "circle(0px at " + cx + "px " + cy + "px)";
+                updateDebugRing(0);
 
                 setTimeout(function () {
-                    if (!_irisAnimating) return;
+                    if (!_irisAnimating) { hideDebugRing(); return; }
 
                     outgoingContent.style.clipPath = "";
                     outgoingContainer.style.display = "none";
@@ -681,6 +709,7 @@
                     function animateOpen(timestamp) {
                         if (!_irisAnimating) {
                             incomingContent.style.clipPath = "";
+                            hideDebugRing();
                             return;
                         }
                         if (!openStart) openStart = timestamp;
@@ -690,11 +719,14 @@
                         var radius = maxR * eased;
 
                         incomingContent.style.clipPath = "circle(" + radius + "px at " + cx + "px " + cy + "px)";
+                        var ringOpacity = progress > 0.6 ? 0 : 1 - (progress / 0.6);
+                        updateDebugRing(radius, ringOpacity);
 
                         if (progress < 1) {
                             requestAnimationFrame(animateOpen);
                         } else {
                             incomingContent.style.clipPath = "";
+                            hideDebugRing();
                             _irisAnimating = false;
 
                             if (onComplete) onComplete();
@@ -801,44 +833,10 @@
     // =========================================================================
     // Active commentary screen — ripples & typewriter
     // =========================================================================
-    var _activeRipples = null;
-
-    function initActiveScreenRipples() {
-        if (_activeRipples) return;
-        setTimeout(function () {
-            try {
-                if (!window.jQuery) return;
-                var el = document.getElementById("worker-active-screen");
-                if (!el || !el.clientWidth) return;
-                var c = document.createElement("canvas");
-                c.width = 1; c.height = 1;
-                var ctx = c.getContext("2d");
-                ctx.fillStyle = "#7a9a86";
-                ctx.fillRect(0, 0, 1, 1);
-                $("#worker-active-screen").ripples({
-                    resolution: 512,
-                    dropRadius: 20,
-                    perturbance: 0.04,
-                    interactive: true,
-                    imageUrl: c.toDataURL()
-                });
-                _activeRipples = setInterval(function () {
-                    if (!el || el.style.display === "none") return;
-                    $("#worker-active-screen").ripples("drop", el.clientWidth / 2, el.clientHeight / 2, 30, 0.3);
-                }, 2000);
-            } catch (e) {
-                console.log("Active screen ripples not supported:", e);
-            }
-        }, 100);
-    }
-
-    function destroyActiveScreenRipples() {
-        if (_activeRipples) {
-            clearInterval(_activeRipples);
-            _activeRipples = null;
-        }
-        try { if (window.jQuery) $("#worker-active-screen").ripples("destroy"); } catch (e) {}
-    }
+    // Ripple is now on the persistent #worker-ripple-bg element (always visible).
+    // These are kept as no-ops for any remaining call sites.
+    function initActiveScreenRipples() {}
+    function destroyActiveScreenRipples() {}
 
     var _activeWordTimer = null;
 

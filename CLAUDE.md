@@ -72,6 +72,26 @@ Timestamps (Unix floats from `time.time()`) are the correlation key between desc
 - Activity log entries track `played` boolean; skipped entries get `.skipped` CSS class (dimmed + skip icon)
 - **Tone switch**: current audio finishes naturally, pending old-tone audio is dropped. Log entries retain their original tone label via `description_tone` stored at generation time.
 
+### Iris Wipe Transition (Worker)
+Animated circular clip-path transition between idle and active screens on the worker page.
+
+**Architecture:**
+- **Persistent ripple background** (`#worker-ripple-bg`): A full-viewport `position: fixed` div (z-index 10) with the WebGL ripple effect (`jquery.ripples.js`). Always visible, never clipped. Both idle and active screen containers have `background: transparent` so the ripple shows through. Periodic center drops fire every 2s only when the active screen is visible.
+- **Screen containers** (`.worker-idle-message`, `.worker-active-screen`): `position: fixed; z-index: 20; background: transparent`. Content inside `.worker-screen-content` wrappers gets clipped; containers themselves are never clipped (preserves ripple visibility).
+- **Static elements** (clock, info, logo, frame): z-index 9999, always above everything, not affected by the transition.
+
+**Animation flow** (`irisTransition()` in `app.js`):
+1. **Close phase** (3000ms, ease-in): `clip-path: circle()` on outgoing content shrinks from full viewport diagonal to 0 at center
+2. **Pause** (1000ms): Hide outgoing container, call `onSwap` callback, show incoming container with `clip-path: circle(0px)`, force reflow
+3. **Open phase** (3000ms, ease-out): `clip-path: circle()` on incoming content grows from 0 to full viewport diagonal, then clip-path is cleared
+
+**Ring stroke overlay**: An SVG circle tracks the clip-path boundary with a 1px white stroke. Opacity fades in during close (transparent for first 40%, then 0→1) and fades out during open (1→0, then transparent for last 40%).
+
+**Edge cases:**
+- **Rapid toggles**: Queued via `_irisPendingState` — only the latest requested state is kept
+- **Initial page load**: No animation (instant show), detected by both containers being `display:none`
+- **Worker rejection**: Cancels any in-progress animation via `_irisAnimating = false`, resets clip-paths instantly
+
 ### Video Pipeline
 - **Worker-only source**: Only the worker browser captures video via `getUserMedia`. Controller never uses the camera.
 - **One worker per room**: `register_client()` returns `None` if a worker already exists; server returns 409 `room_occupied`. Rejected workers see "This workstation is occupied" idle screen.

@@ -1518,6 +1518,16 @@ body.worker-mode {
     background: var(--lumon-sage);
 }
 
+#worker-ripple-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--lumon-sage);
+    z-index: 10;
+}
+
 body.worker-mode::before {
     content: '';
     position: fixed;
@@ -1710,10 +1720,12 @@ body.worker-mode .video-container {
 
 /* --- Worker idle screen (Lumon theme) --- */
 .worker-idle-message {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
-    min-height: 100vh;
-    background: var(--lumon-sage);
+    height: 100vh;
+    background: transparent;
     z-index: 20;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow: hidden;
@@ -1843,10 +1855,12 @@ body.worker-mode .video-container {
 
 /* --- Worker active commentary screen --- */
 .worker-active-screen {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
-    min-height: 100vh;
-    background: var(--lumon-sage);
+    height: 100vh;
+    background: transparent;
     z-index: 20;
     overflow: hidden;
 }
