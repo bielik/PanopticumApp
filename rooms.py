@@ -92,6 +92,20 @@ class Room:
     _frequency_version: int = 0
     _comment_length_version: int = 0
     _heat_strength_version: int = 0
+    freeze_time: float = 20.0              # frost game: seconds to fully freeze (5–60)
+    _freeze_time_version: int = 0
+
+    # Work mode (worker screen active/idle, independent from pipeline)
+    work_active: bool = False
+    _work_version: int = 0
+
+    # Work score (uploaded by worker, streamed to controller)
+    work_score_unfrozen: int = 0
+    work_score_total: int = 0
+    work_score_cols: int = 0
+    work_score_rows: int = 0
+    work_score_tiles: str = ""          # base64-encoded Uint8Array of frost progress (0-255)
+    _work_score_version: int = 0
 
     # Audio files: timestamp -> mp3 bytes
     audio_files: dict = field(default_factory=dict)

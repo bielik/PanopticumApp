@@ -124,6 +124,7 @@ Key points:
 | `clients` | `{clients: [...], active_source: str}` | Client join/leave/source switch |
 | `action_phase` | `{setting, phase, action}` | Action mode state changed |
 | `work` | `{active: bool}` | Work mode started/stopped |
+| `work_score` | `{unfrozen, total, cols, rows, tiles}` | Work score updated (tiles: base64 Uint8Array) |
 | `freeze_time` | `{value: float}` | Freeze time setting changed |
 
 ### Gemini Unified Mode
@@ -196,6 +197,15 @@ Pipeline activation and work mode are **two independent concerns** on the worker
 - `frostComputeGrid(width, height)` computes cols/rows from canvas dimensions, rounding both to **even numbers** (min 2).
 - On window resize, `frostResizeAndRemap()` recomputes the grid and performs a **nearest-neighbor spatial remap** of tile state (timestamps + frozen flags) from old grid to new grid, preserving the frost pattern.
 - Grid dimensions are mutable (`_frostCols`, `_frostRows`), not constants.
+- On resize, `frostResizeAndRemap()` also recounts frozen tiles, updates circle text, recalculates game-over state, and forces an immediate score upload to the server.
+
+**Work score propagation** — score and full tile state stream from worker → server → controller:
+- Worker uploads score + base64-encoded tile snapshot (Uint8Array, 0=warm/255=frozen) throttled every 2s via `POST /room/{code}/api/work-score`.
+- Server stores on Room (`work_score_unfrozen`, `work_score_total`, `work_score_cols`, `work_score_rows`, `work_score_tiles`, `_work_score_version`), emits SSE `work_score` event.
+- Score resets to zero when work stops or pipeline cascade-stops.
+- **Worker circle** shows percentage (`85%`) instead of commentary during work mode. Commentary descriptions are suppressed from the circle (`!isWorkActive` guard) but still logged.
+- **Worker bottom-right label** shows `heat:N%  freeze:Ns` instead of score (score is in the circle).
+- **Controller App Status** (Q3) has a "Work Score" section below Connected Devices: fixed 450x450 canvas rendering the frost grid with white outlined cells at varying transparency, plus percentage label. Hidden when work is inactive.
 
 ## Dev Setup
 

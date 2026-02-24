@@ -37,6 +37,7 @@
             <div class="ctrl-quadrant ctrl-q1">
                 <div class="ctrl-q-header">Actions</div>
                 <button class="ctrl-action-btn inactive" id="start-stop-btn">START PANOPTICUM</button>
+                <button class="ctrl-action-btn inactive" id="work-btn" disabled>START WORK</button>
                 <button class="ctrl-action-btn" id="action-trigger-btn">Request Action</button>
             </div>
 
@@ -57,6 +58,11 @@
                 </div>
                 <span class="ctrl-label">Connected Devices</span>
                 <div id="client-list" class="client-list"></div>
+                <div class="ctrl-work-score" id="work-score-container" style="display:none">
+                    <span class="ctrl-label">Work Score</span>
+                    <span id="work-score-label" class="work-score-label"></span>
+                    <canvas id="work-score-canvas" class="work-score-canvas"></canvas>
+                </div>
             </div>
 
             <!-- Q4: Settings (bottom-right) -->
@@ -104,6 +110,14 @@
                         <input type="range" id="heat-strength-slider" min="10" max="100" step="5" value="70" style="display:none">
                     </div>
                 </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">Freeze Time</span>
+                    <div class="ctrl-bar-slider" id="freeze-time-bar">
+                        <div class="ctrl-bar-fill" id="freeze-time-fill"></div>
+                        <span class="ctrl-bar-text" id="freeze-time-value">20s</span>
+                        <input type="range" id="freeze-time-slider" min="5" max="60" step="1" value="20" style="display:none">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -114,7 +128,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=49"></script>
+    <script src="/static/app.js?v=51"></script>
     <script>
         try {
             var c = document.createElement('canvas');

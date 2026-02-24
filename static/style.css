@@ -792,7 +792,7 @@ body.worker-mode .action-panel {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-width: 300px;
+    max-width: 450px;
 }
 
 .client-item {
@@ -1277,6 +1277,26 @@ body.controller-mode .active-logo {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.ctrl-work-score {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    max-width: 450px;
+}
+
+.work-score-canvas {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: 100%;
+}
+
+.work-score-label {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #fff;
+    letter-spacing: 2px;
 }
 
 .ctrl-btn {

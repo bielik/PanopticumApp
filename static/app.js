@@ -108,6 +108,9 @@
 
     // Work mode elements
     var workBtn = document.getElementById("work-btn");
+    var workScoreContainer = document.getElementById("work-score-container");
+    var workScoreCanvas = document.getElementById("work-score-canvas");
+    var workScoreLabel = document.getElementById("work-score-label");
 
     // --- State ---
     var isActive = false;
@@ -587,6 +590,12 @@
             initFrostGame();
         } else {
             destroyFrostGame();
+            if (_workScoreUploadTimer) {
+                clearTimeout(_workScoreUploadTimer);
+                _workScoreUploadTimer = null;
+            }
+            _lastUploadedScore = -1;
+            clearActiveText();
         }
     }
 
@@ -708,6 +717,8 @@
     var _frostMouseY = -9999;
     var _frostLastFrame = 0;
     var _frostDebug = false;  // toggle: window._frostDebug = true in console
+    var _workScoreUploadTimer = null;
+    var _lastUploadedScore = -1;
 
     function frostComputeGrid(width, height) {
         var cols = Math.round(width / FROST_TARGET_TILE_PX);
@@ -833,21 +844,81 @@
         _frostAnimFrame = requestAnimationFrame(frostRenderLoop);
     }
 
+    function frostBuildTileSnapshot() {
+        var total = _frostCols * _frostRows;
+        var arr = new Uint8Array(total);
+        var now = Date.now();
+        for (var i = 0; i < total; i++) {
+            var age = now - _frostTiles[i];
+            var progress = Math.max(0, Math.min(age / FROST_TIMEOUT, 1));
+            arr[i] = Math.round(progress * 255);
+        }
+        var binary = "";
+        for (var i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
+        return btoa(binary);
+    }
+
+    function frostUploadScore(unfrozen) {
+        var total = _frostCols * _frostRows;
+        fetch(API + "/work-score", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                unfrozen: unfrozen,
+                total: total,
+                cols: _frostCols,
+                rows: _frostRows,
+                tiles: frostBuildTileSnapshot()
+            }),
+        }).catch(function (err) { console.warn("Work score upload error:", err); });
+    }
+
     function frostUpdateScore(unfrozen) {
         if (!_frostScoreEl) return;
         if (_frostGameOver) return;
         var total = _frostCols * _frostRows;
         var heatPct = Math.round(_frostHeatStrength * 100);
-        _frostScoreEl.textContent = unfrozen + " / " + total + "  heat:" + heatPct + "%";
+        var freezeSec = Math.round(FROST_TIMEOUT / 1000);
+        _frostScoreEl.textContent = "heat:" + heatPct + "%  freeze:" + freezeSec + "s";
+
+        // Show score in circle when work is active
+        if (isWorkActive) {
+            var circleText = document.getElementById("active-text");
+            if (circleText) {
+                if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
+                circleText.classList.remove("typing");
+                circleText.textContent = Math.round((unfrozen / total) * 100) + "%";
+            }
+        }
+
+        // Throttled upload to server (every 2s)
+        if (unfrozen !== _lastUploadedScore && !_workScoreUploadTimer) {
+            _workScoreUploadTimer = setTimeout(function () {
+                _workScoreUploadTimer = null;
+                _lastUploadedScore = unfrozen;
+                frostUploadScore(unfrozen);
+            }, 2000);
+        }
     }
 
     function frostOnGameOver() {
         _frostGameOver = true;
+        var total = _frostCols * _frostRows;
         if (_frostScoreEl) {
-            var total = _frostCols * _frostRows;
-            _frostScoreEl.textContent = "0 / " + total + " \u2014 TERMINATED";
+            _frostScoreEl.textContent = "TERMINATED";
             _frostScoreEl.style.color = "#ef4444";
         }
+        // Update circle with terminal score
+        if (isWorkActive) {
+            var circleText = document.getElementById("active-text");
+            if (circleText) {
+                if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
+                circleText.classList.remove("typing");
+                circleText.textContent = "0%";
+            }
+        }
+        // Upload final score immediately
+        frostUploadScore(0);
     }
 
     function frostResizeAndRemap() {
@@ -895,6 +966,39 @@
         _frostRows = newRows;
         _frostTiles = newTiles;
         _frostFrozen = newFrozen;
+
+        // Recount frozen tiles and update score/circle/server after grid change
+        var frozenCount = 0;
+        for (var i = 0; i < newTotal; i++) {
+            if (newFrozen[i]) frozenCount++;
+        }
+        var unfrozen = newTotal - frozenCount;
+
+        // Update circle text
+        if (isWorkActive) {
+            var circleText = document.getElementById("active-text");
+            if (circleText) {
+                if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
+                circleText.classList.remove("typing");
+                circleText.textContent = Math.round((unfrozen / newTotal) * 100) + "%";
+            }
+        }
+
+        // Update game-over state for new grid
+        if (frozenCount >= newTotal) {
+            _frostGameOver = true;
+            if (_frostScoreEl) {
+                _frostScoreEl.textContent = "TERMINATED";
+                _frostScoreEl.style.color = "#ef4444";
+            }
+        } else {
+            _frostGameOver = false;
+            if (_frostScoreEl) _frostScoreEl.style.color = "#fff";
+        }
+
+        // Force immediate upload to server
+        _lastUploadedScore = -1;
+        frostUploadScore(unfrozen);
     }
 
     function initFrostGame() {
@@ -1387,6 +1491,58 @@
         }
     }
 
+    function updateWorkScoreDisplay(data) {
+        if (!workScoreContainer) return;
+        if (!data || !data.total || !data.cols || !data.tiles) {
+            workScoreContainer.style.display = "none";
+            return;
+        }
+        // Decode base64 tiles to Uint8Array
+        var binary = atob(data.tiles);
+        var arr = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+
+        // Render grid cells matching worker frost style (white fill + white outlines)
+        // Fixed 450x450 canvas — cells stretch to fill
+        if (workScoreCanvas) {
+            var GRID_W = 450;
+            var GRID_H = 450;
+            var cellW = GRID_W / data.cols;
+            var cellH = GRID_H / data.rows;
+            workScoreCanvas.width = GRID_W;
+            workScoreCanvas.height = GRID_H;
+            workScoreCanvas.style.width = GRID_W + "px";
+            workScoreCanvas.style.height = GRID_H + "px";
+
+            var ctx = workScoreCanvas.getContext("2d");
+            ctx.clearRect(0, 0, GRID_W, GRID_H);
+
+            for (var i = 0; i < arr.length; i++) {
+                var col = i % data.cols;
+                var row = Math.floor(i / data.cols);
+                var x = col * cellW;
+                var y = row * cellH;
+                var progress = arr[i] / 255;
+                if (progress <= 0) continue;
+
+                var fillAlpha = progress * 0.8;
+                var strokeAlpha = Math.min(fillAlpha + 0.2, 1);
+                ctx.fillStyle = "rgba(255, 255, 255, " + fillAlpha.toFixed(3) + ")";
+                ctx.fillRect(x, y, cellW, cellH);
+                ctx.strokeStyle = "rgba(255, 255, 255, " + strokeAlpha.toFixed(3) + ")";
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(x + 0.25, y + 0.25, cellW - 0.5, cellH - 0.5);
+            }
+        }
+
+        // Update score label
+        if (workScoreLabel) {
+            var pct = Math.round((data.unfrozen / data.total) * 100);
+            workScoreLabel.textContent = pct + "%";
+        }
+        workScoreContainer.style.display = "";
+    }
+
     actionSettingPills.forEach(function (btn) {
         btn.addEventListener("click", function () {
             setActionSetting(btn.getAttribute("data-action-setting"));
@@ -1471,8 +1627,8 @@
         var data = JSON.parse(e.data);
         if (data.text) {
             addToMessageLog(data.text, data.tone, data.timestamp ? String(data.timestamp) : null, data.type || "commentary");
-            // Feed text to active commentary screen typewriter
-            if (MODE === "worker" && workerActiveScreen && workerActiveScreen.style.display !== "none") {
+            // Feed text to active commentary screen typewriter (not during work mode — circle shows score)
+            if (MODE === "worker" && !isWorkActive && workerActiveScreen && workerActiveScreen.style.display !== "none") {
                 updateActiveText(data.text);
             }
         }
@@ -1546,6 +1702,14 @@
         var data = JSON.parse(e.data);
         updateWorkButton(data.active);
         updateFrostGameState(data.active);
+        if (!data.active) {
+            updateWorkScoreDisplay(null);
+        }
+    });
+
+    evtSource.addEventListener("work_score", function (e) {
+        var data = JSON.parse(e.data);
+        updateWorkScoreDisplay(data);
     });
 
     // Audio events (both modes mark log entries; only worker plays audio)
@@ -1576,6 +1740,15 @@
             updateWorkButton(data.work_active);
             updateWorkerIdleState(data.active);
             updateFrostGameState(data.work_active);
+            if (data.work_active && data.work_score_total > 0) {
+                updateWorkScoreDisplay({
+                    unfrozen: data.work_score_unfrozen,
+                    total: data.work_score_total,
+                    cols: data.work_score_cols,
+                    rows: data.work_score_rows,
+                    tiles: data.work_score_tiles,
+                });
+            }
 
             var v = parseFloat(data.tone);
             var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";

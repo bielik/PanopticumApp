@@ -263,6 +263,13 @@ class FreezeTimeRequest(BaseModel):
 class WorkRequest(BaseModel):
     active: bool
 
+class WorkScoreRequest(BaseModel):
+    unfrozen: int
+    total: int
+    cols: int
+    rows: int
+    tiles: str  # base64-encoded tile progress
+
 
 @app.get("/room/{code}/api/status")
 async def room_status(code: str):
@@ -283,6 +290,11 @@ async def room_status(code: str):
         "action_phase": room.action_phase,
         "action_requested": room.action_requested,
         "work_active": room.work_active,
+        "work_score_unfrozen": room.work_score_unfrozen,
+        "work_score_total": room.work_score_total,
+        "work_score_cols": room.work_score_cols,
+        "work_score_rows": room.work_score_rows,
+        "work_score_tiles": room.work_score_tiles,
     }
 
 
@@ -314,6 +326,12 @@ async def room_set_active(code: str, req: ActiveRequest):
     if not req.active and room.work_active:
         room.work_active = False
         room._work_version += 1
+        room.work_score_unfrozen = 0
+        room.work_score_total = 0
+        room.work_score_cols = 0
+        room.work_score_rows = 0
+        room.work_score_tiles = ""
+        room._work_score_version += 1
 
     # Start or stop analysis loop
     if req.active and (room._analysis_task is None or room._analysis_task.done()):
@@ -333,9 +351,30 @@ async def room_set_work(code: str, req: WorkRequest):
         return JSONResponse(status_code=400, content={"error": "Pipeline not active"})
     room.work_active = req.active
     room._work_version += 1
+    if not req.active:
+        room.work_score_unfrozen = 0
+        room.work_score_total = 0
+        room.work_score_cols = 0
+        room.work_score_rows = 0
+        room.work_score_tiles = ""
+        room._work_score_version += 1
     room.touch()
     log.info(f"[{code}] Work mode {'STARTED' if req.active else 'STOPPED'}")
     return {"active": room.work_active}
+
+
+@app.post("/room/{code}/api/work-score")
+async def room_update_work_score(code: str, req: WorkScoreRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    room.work_score_unfrozen = req.unfrozen
+    room.work_score_total = req.total
+    room.work_score_cols = req.cols
+    room.work_score_rows = req.rows
+    room.work_score_tiles = req.tiles
+    room._work_score_version += 1
+    return {"ok": True}
 
 
 @app.get("/room/{code}/api/effect")
@@ -623,6 +662,7 @@ async def _sse_generator(room: Room):
     last_heat_strength_version = -1
     last_freeze_time_version = -1
     last_work_version = -1
+    last_work_score_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -710,6 +750,17 @@ async def _sse_generator(room: Room):
         if work_version != last_work_version:
             last_work_version = work_version
             events.append(("work", json.dumps({"active": room.work_active})))
+
+        work_score_version = room._work_score_version
+        if work_score_version != last_work_score_version:
+            last_work_score_version = work_score_version
+            events.append(("work_score", json.dumps({
+                "unfrozen": room.work_score_unfrozen,
+                "total": room.work_score_total,
+                "cols": room.work_score_cols,
+                "rows": room.work_score_rows,
+                "tiles": room.work_score_tiles,
+            })))
 
         # Emit audio events for any new audio files (decoupled from description timing)
         for audio_ts in list(room.audio_files.keys()):
