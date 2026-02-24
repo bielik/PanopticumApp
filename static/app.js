@@ -73,6 +73,8 @@
     var commentLengthValue = document.getElementById("comment-length-value");
     var heatStrengthSlider = document.getElementById("heat-strength-slider");
     var heatStrengthValue = document.getElementById("heat-strength-value");
+    var freezeTimeSlider = document.getElementById("freeze-time-slider");
+    var freezeTimeValue = document.getElementById("freeze-time-value");
 
     // Camera elements (worker only — controller no longer captures video)
     var localVideo = document.getElementById("local-video");
@@ -104,8 +106,12 @@
     var actionRequestedText = document.getElementById("action-requested-text");
     var actionTriggerBtn = document.getElementById("action-trigger-btn");
 
+    // Work mode elements
+    var workBtn = document.getElementById("work-btn");
+
     // --- State ---
     var isActive = false;
+    var isWorkActive = false;
     var currentTone = "0.5";
     var frameUploadInterval = null;
     var cameraStream = null;
@@ -550,17 +556,16 @@
     function updateWorkerIdleState(active) {
         if (MODE !== "worker") return;
         if (active) {
-            // Session active — show active commentary screen immediately
+            // Pipeline active — show active commentary screen immediately
             hideLoadingScreen();
             if (workerIdleMessage) workerIdleMessage.style.display = "none";
             if (workerActiveScreen) {
                 workerActiveScreen.style.display = "flex";
                 initActiveScreenRipples();
-                initFrostGame();
             }
             if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
         } else {
-            // Session stopped — show idle message, hide active screen
+            // Pipeline stopped — show idle message, hide active screen
             if (workerActiveScreen) workerActiveScreen.style.display = "none";
             destroyActiveScreenRipples();
             destroyFrostGame();
@@ -573,6 +578,15 @@
                 workerStream.src = "";
                 workerStream.style.display = "none";
             }
+        }
+    }
+
+    function updateFrostGameState(active) {
+        if (MODE !== "worker") return;
+        if (active) {
+            initFrostGame();
+        } else {
+            destroyFrostGame();
         }
     }
 
@@ -968,6 +982,22 @@
         }
     }
 
+    function updateWorkButton(active) {
+        isWorkActive = active;
+        if (!workBtn) return;
+        if (active) {
+            workBtn.textContent = "STOP WORK";
+            workBtn.classList.remove("inactive");
+            workBtn.classList.add("active");
+            workBtn.disabled = false;
+        } else {
+            workBtn.textContent = "START WORK";
+            workBtn.classList.remove("active");
+            workBtn.classList.add("inactive");
+            workBtn.disabled = !isActive;
+        }
+    }
+
     if (startStopBtn) {
         startStopBtn.addEventListener("click", function () {
             var newActive = !isActive;
@@ -975,6 +1005,17 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ active: newActive }),
+            });
+        });
+    }
+
+    if (workBtn) {
+        workBtn.addEventListener("click", function () {
+            var newWork = !isWorkActive;
+            fetch(API + "/work", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ active: newWork }),
             });
         });
     }
@@ -1140,6 +1181,25 @@
     }
     initBarSlider(document.getElementById("heat-strength-bar"), heatStrengthSlider);
 
+    // Freeze time slider
+    function updateFreezeTimeLabel(secs) {
+        if (freezeTimeValue) freezeTimeValue.textContent = secs + "s";
+    }
+    if (freezeTimeSlider) {
+        freezeTimeSlider.addEventListener("input", function () {
+            updateFreezeTimeLabel(parseInt(freezeTimeSlider.value, 10));
+        });
+        freezeTimeSlider.addEventListener("change", function () {
+            var secs = parseInt(freezeTimeSlider.value, 10);
+            fetch(API + "/freeze-time", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: secs }),
+            }).catch(function (err) { console.warn("Freeze time error:", err); });
+        });
+    }
+    initBarSlider(document.getElementById("freeze-time-bar"), freezeTimeSlider);
+
     // =========================================================================
     // Message log
     // =========================================================================
@@ -1262,7 +1322,7 @@
             actionRequestedText.textContent = action || "";
         }
         if (actionTriggerBtn) {
-            actionTriggerBtn.disabled = phase !== "commenting";
+            actionTriggerBtn.disabled = !isActive || phase !== "commenting";
         }
     }
 
@@ -1274,7 +1334,7 @@
 
     if (actionTriggerBtn) {
         actionTriggerBtn.addEventListener("click", function () {
-            if (currentActionPhase !== "commenting") return;
+            if (!isActive || currentActionPhase !== "commenting") return;
             fetch(API + "/trigger-action", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1294,7 +1354,19 @@
         var data = JSON.parse(e.data);
         var wasActive = isActive;
         updateStartStopButton(data.active);
-        updateWorkerIdleState(data.active);
+
+        // Update work button: disabled when pipeline off, enabled when on (unless work already active)
+        if (workBtn) {
+            if (!data.active) {
+                workBtn.disabled = true;
+            } else if (!isWorkActive) {
+                workBtn.disabled = false;
+            }
+        }
+        // Update action trigger disabled state
+        if (actionTriggerBtn) {
+            actionTriggerBtn.disabled = !data.active || currentActionPhase !== "commenting";
+        }
 
         if (MODE === "controller") {
             var circle = document.getElementById("ctrl-circle");
@@ -1329,6 +1401,9 @@
                 stopCamera();
             }
         }
+
+        // Worker active screen tied to pipeline state
+        updateWorkerIdleState(data.active);
     });
 
     evtSource.addEventListener("description", function (e) {
@@ -1397,6 +1472,21 @@
         }
     });
 
+    evtSource.addEventListener("freeze_time", function (e) {
+        var data = JSON.parse(e.data);
+        FROST_TIMEOUT = data.value * 1000;
+        if (freezeTimeSlider) {
+            freezeTimeSlider.value = Math.round(data.value);
+            freezeTimeSlider.dispatchEvent(new Event("input"));
+        }
+    });
+
+    evtSource.addEventListener("work", function (e) {
+        var data = JSON.parse(e.data);
+        updateWorkButton(data.active);
+        updateFrostGameState(data.active);
+    });
+
     // Audio events (both modes mark log entries; only worker plays audio)
     evtSource.addEventListener("audio", function (e) {
         var data = JSON.parse(e.data);
@@ -1422,7 +1512,9 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
             updateStartStopButton(data.active);
+            updateWorkButton(data.work_active);
             updateWorkerIdleState(data.active);
+            updateFrostGameState(data.work_active);
 
             var v = parseFloat(data.tone);
             var nearest = v <= 0.25 ? "0" : v <= 0.75 ? "0.5" : "1";

@@ -257,6 +257,12 @@ class CommentLengthRequest(BaseModel):
 class HeatStrengthRequest(BaseModel):
     value: float
 
+class FreezeTimeRequest(BaseModel):
+    value: float
+
+class WorkRequest(BaseModel):
+    active: bool
+
 
 @app.get("/room/{code}/api/status")
 async def room_status(code: str):
@@ -276,6 +282,7 @@ async def room_status(code: str):
         "action_setting": room.action_setting,
         "action_phase": room.action_phase,
         "action_requested": room.action_requested,
+        "work_active": room.work_active,
     }
 
 
@@ -303,6 +310,11 @@ async def room_set_active(code: str, req: ActiveRequest):
         room.action_requested = ""
         room._action_phase_version += 1
 
+    # Cascade-stop work when pipeline stops
+    if not req.active and room.work_active:
+        room.work_active = False
+        room._work_version += 1
+
     # Start or stop analysis loop
     if req.active and (room._analysis_task is None or room._analysis_task.done()):
         room._analysis_task = asyncio.create_task(_analysis_loop(room))
@@ -310,6 +322,20 @@ async def room_set_active(code: str, req: ActiveRequest):
         room._analysis_task.cancel()
 
     return {"active": room.active}
+
+
+@app.post("/room/{code}/api/work")
+async def room_set_work(code: str, req: WorkRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    if req.active and not room.active:
+        return JSONResponse(status_code=400, content={"error": "Pipeline not active"})
+    room.work_active = req.active
+    room._work_version += 1
+    room.touch()
+    log.info(f"[{code}] Work mode {'STARTED' if req.active else 'STOPPED'}")
+    return {"active": room.work_active}
 
 
 @app.get("/room/{code}/api/effect")
@@ -395,6 +421,18 @@ async def room_set_heat_strength(code: str, req: HeatStrengthRequest):
     room._heat_strength_version += 1
     room.touch()
     log.info(f"[{code}] Heat strength: {value:.0%}")
+    return {"value": value}
+
+@app.post("/room/{code}/api/freeze-time")
+async def room_set_freeze_time(code: str, req: FreezeTimeRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    value = max(5.0, min(60.0, req.value))
+    room.freeze_time = value
+    room._freeze_time_version += 1
+    room.touch()
+    log.info(f"[{code}] Freeze time: {value:.0f}s")
     return {"value": value}
 
 
@@ -583,6 +621,8 @@ async def _sse_generator(room: Room):
     last_frequency_version = -1
     last_comment_length_version = -1
     last_heat_strength_version = -1
+    last_freeze_time_version = -1
+    last_work_version = -1
     emitted_audio_keys: set = set()
 
     while True:
@@ -660,6 +700,16 @@ async def _sse_generator(room: Room):
             events.append(("heat_strength", json.dumps({
                 "value": room.heat_strength,
             })))
+
+        ft_version = room._freeze_time_version
+        if ft_version != last_freeze_time_version:
+            last_freeze_time_version = ft_version
+            events.append(("freeze_time", json.dumps({"value": room.freeze_time})))
+
+        work_version = room._work_version
+        if work_version != last_work_version:
+            last_work_version = work_version
+            events.append(("work", json.dumps({"active": room.work_active})))
 
         # Emit audio events for any new audio files (decoupled from description timing)
         for audio_ts in list(room.audio_files.keys()):
