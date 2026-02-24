@@ -228,6 +228,8 @@
     function startCtrlRipples() {
         stopCtrlRipples();
         if (!window.jQuery) return;
+        // No ripples in short display mode (circle hidden)
+        if (window.matchMedia("(max-width: 799px), (max-height: 799px)").matches) return;
         var el = document.getElementById("ctrl-screen");
         if (!el) return;
         window._ctrlRipplesDrop = setInterval(function () {
