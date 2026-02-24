@@ -128,6 +128,10 @@
     var currentCommentLength = 10;
     var _mjpegRetryTimer = null;
 
+    // --- Iris wipe transition ---
+    var _irisAnimating = false;
+    var _irisPendingState = null;
+
     // --- Message log ---
     var messageLog = [];
     var MAX_LOG_MESSAGES = 10;
@@ -340,6 +344,14 @@
     // Worker rejection handling (room occupied)
     // =========================================================================
     function handleWorkerRejection() {
+        // Cancel any in-progress iris transition
+        _irisAnimating = false;
+        _irisPendingState = null;
+        var idleContent = document.getElementById("worker-idle-content");
+        var activeContent = document.getElementById("worker-active-content");
+        if (idleContent) idleContent.style.clipPath = "";
+        if (activeContent) activeContent.style.clipPath = "";
+
         // Show idle screen with rejection message
         if (workerIdleMessage) workerIdleMessage.style.display = "flex";
         if (workerActiveScreen) workerActiveScreen.style.display = "none";
@@ -608,33 +620,164 @@
     }
 
     // =========================================================================
-    // Worker idle state
+    // Worker idle state + iris wipe transition
     // =========================================================================
+    function irisFullRadius() {
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        return Math.sqrt(vw * vw + vh * vh) / 2;
+    }
+
+    function irisTransition(toActive, onSwap, onComplete) {
+        var CLOSE_DURATION = 700;
+        var PAUSE_DURATION = 100;
+        var OPEN_DURATION = 700;
+
+        var outgoingContainer = toActive ? workerIdleMessage : workerActiveScreen;
+        var incomingContainer = toActive ? workerActiveScreen : workerIdleMessage;
+        if (!outgoingContainer || !incomingContainer) return;
+
+        // Clip the content wrappers, not the containers (preserves ripple backgrounds)
+        var outgoingContent = document.getElementById(toActive ? "worker-idle-content" : "worker-active-content");
+        var incomingContent = document.getElementById(toActive ? "worker-active-content" : "worker-idle-content");
+        if (!outgoingContent || !incomingContent) return;
+
+        var maxR = irisFullRadius();
+        var cx = window.innerWidth / 2;
+        var cy = window.innerHeight / 2;
+
+        _irisAnimating = true;
+
+        var startTime = null;
+        function animateClose(timestamp) {
+            if (!_irisAnimating) return;
+            if (!startTime) startTime = timestamp;
+            var elapsed = timestamp - startTime;
+            var progress = Math.min(elapsed / CLOSE_DURATION, 1);
+            var eased = progress * progress;
+            var radius = maxR * (1 - eased);
+
+            outgoingContent.style.clipPath = "circle(" + radius + "px at " + cx + "px " + cy + "px)";
+
+            if (progress < 1) {
+                requestAnimationFrame(animateClose);
+            } else {
+                outgoingContent.style.clipPath = "circle(0px at " + cx + "px " + cy + "px)";
+
+                setTimeout(function () {
+                    if (!_irisAnimating) return;
+
+                    outgoingContent.style.clipPath = "";
+                    outgoingContainer.style.display = "none";
+
+                    if (onSwap) onSwap();
+
+                    incomingContainer.style.display = "flex";
+                    incomingContent.style.clipPath = "circle(0px at " + cx + "px " + cy + "px)";
+                    // Force reflow so clip-path is applied before first paint
+                    void incomingContent.offsetHeight;
+
+                    var openStart = null;
+                    function animateOpen(timestamp) {
+                        if (!_irisAnimating) {
+                            incomingContent.style.clipPath = "";
+                            return;
+                        }
+                        if (!openStart) openStart = timestamp;
+                        var elapsed = timestamp - openStart;
+                        var progress = Math.min(elapsed / OPEN_DURATION, 1);
+                        var eased = 1 - (1 - progress) * (1 - progress);
+                        var radius = maxR * eased;
+
+                        incomingContent.style.clipPath = "circle(" + radius + "px at " + cx + "px " + cy + "px)";
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animateOpen);
+                        } else {
+                            incomingContent.style.clipPath = "";
+                            _irisAnimating = false;
+
+                            if (onComplete) onComplete();
+
+                            if (_irisPendingState !== null) {
+                                var pending = _irisPendingState;
+                                _irisPendingState = null;
+                                updateWorkerIdleState(pending);
+                            }
+                        }
+                    }
+                    requestAnimationFrame(animateOpen);
+                }, PAUSE_DURATION);
+            }
+        }
+        requestAnimationFrame(animateClose);
+    }
+
     function updateWorkerIdleState(active) {
         if (MODE !== "worker") return;
-        if (active) {
-            // Pipeline active — show active commentary screen immediately
-            hideLoadingScreen();
-            if (workerIdleMessage) workerIdleMessage.style.display = "none";
-            if (workerActiveScreen) {
-                workerActiveScreen.style.display = "flex";
-                initActiveScreenRipples();
+
+        if (_irisAnimating) {
+            _irisPendingState = active;
+            return;
+        }
+
+        var idleVisible = workerIdleMessage && workerIdleMessage.style.display !== "none";
+        var activeVisible = workerActiveScreen && workerActiveScreen.style.display !== "none";
+
+        if (active && activeVisible) return;
+        if (!active && idleVisible) return;
+
+        // First call on page load — neither screen visible, no animation
+        if (!idleVisible && !activeVisible) {
+            if (active) {
+                hideLoadingScreen();
+                if (workerActiveScreen) {
+                    workerActiveScreen.style.display = "flex";
+                    initActiveScreenRipples();
+                }
+            } else {
+                if (workerIdleMessage) {
+                    workerIdleMessage.style.display = "flex";
+                    startSloganTypewriter();
+                }
             }
             if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
+            return;
+        }
+
+        // Animated iris wipe transition
+        if (active) {
+            hideLoadingScreen();
+            irisTransition(true,
+                function onSwap() {
+                    initActiveScreenRipples();
+                },
+                function onComplete() {
+                    if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
+                }
+            );
         } else {
-            // Pipeline stopped — show idle message, hide active screen
-            if (workerActiveScreen) workerActiveScreen.style.display = "none";
-            destroyActiveScreenRipples();
-            destroyFrostGame();
-            clearActiveText();
-            if (workerIdleMessage) {
-                workerIdleMessage.style.display = "flex";
-                startSloganTypewriter();
-            }
-            if (workerStream) {
-                workerStream.src = "";
-                workerStream.style.display = "none";
-            }
+            irisTransition(false,
+                function onSwap() {
+                    destroyActiveScreenRipples();
+                    destroyFrostGame();
+                    clearActiveText();
+                    _sloganTyped = false;
+                    var sloganEl = document.getElementById("worker-idle-slogan");
+                    if (sloganEl) {
+                        sloganEl.textContent = "";
+                        sloganEl.classList.remove("typing", "typed");
+                    }
+                    var idBox = document.querySelector(".worker-idle-id");
+                    if (idBox) idBox.classList.remove("visible");
+                    var statusText = document.getElementById("worker-idle-status-text");
+                    if (statusText) { statusText.classList.remove("visible"); statusText.style.display = "none"; }
+                    startSloganTypewriter();
+                },
+                function onComplete() {
+                    if (workerStream) { workerStream.src = ""; workerStream.style.display = "none"; }
+                }
+            );
         }
     }
 

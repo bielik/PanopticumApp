@@ -249,7 +249,7 @@ var Ripples = function (el, options) {
 		top: 0,
 		right: 0,
 		bottom: 0,
-		zIndex: -1,
+		zIndex: 1,
 		transform: 'scale(1.15)',  // Keep the 110% zoom
 		transformOrigin: 'center center'
 	});
@@ -261,7 +261,7 @@ var Ripples = function (el, options) {
 		top: 0,
 		right: 0,
 		bottom: 0,
-		zIndex: -1,
+		zIndex: 1,
 		perspective: '2000px',  // Increased from 1000px for more subtle depth
 		transformStyle: 'preserve-3d'
 	});

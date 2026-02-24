@@ -935,7 +935,7 @@ body:not(.worker-mode) {
 }
 
 body:not(.worker-mode):active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='10' fill='rgba(255,255,255,0.2)'/%3E%3Ccircle cx='20' cy='20' r='7' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='20' cy='20' r='4' fill='white'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 /* Override pointer cursor on ALL clickable elements with white-filled circle.
@@ -949,7 +949,7 @@ body:not(.worker-mode) [role="button"],
 body:not(.worker-mode) [tabindex]:not([tabindex="-1"]),
 body:not(.worker-mode) [onclick],
 body:not(.worker-mode) .clickable {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.04)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 body:not(.worker-mode) button:active,
@@ -961,7 +961,7 @@ body:not(.worker-mode) [role="button"]:active,
 body:not(.worker-mode) [tabindex]:not([tabindex="-1"]):active,
 body:not(.worker-mode) [onclick]:active,
 body:not(.worker-mode) .clickable:active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.15)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='white' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 /* --- Controller redesigned layout --- */
@@ -1531,7 +1531,7 @@ body.worker-mode::before {
 }
 
 body.worker-mode:active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='10' fill='rgba(255,255,255,0.2)'/%3E%3Ccircle cx='20' cy='20' r='7' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='20' cy='20' r='4' fill='white'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 /* Override pointer cursor on ALL clickable elements in worker mode */
@@ -1544,7 +1544,7 @@ body.worker-mode [role="button"],
 body.worker-mode [tabindex]:not([tabindex="-1"]),
 body.worker-mode [onclick],
 body.worker-mode .clickable {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.04)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 body.worker-mode button:active,
@@ -1556,7 +1556,7 @@ body.worker-mode [role="button"]:active,
 body.worker-mode [tabindex]:not([tabindex="-1"]):active,
 body.worker-mode [onclick]:active,
 body.worker-mode .clickable:active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.15)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='white' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 body.worker-mode .dashboard {
@@ -1649,6 +1649,24 @@ body.worker-mode .video-container {
     color: #fff;
 }
 
+/* --- Worker fixed logo (visible in both idle and active modes) --- */
+.worker-logo {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.worker-logo svg {
+    width: 100%;
+    height: auto;
+    fill: #fff;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+}
+
 .copy-tooltip {
     position: fixed;
     font-family: 'Share Tech Mono', monospace;
@@ -1665,47 +1683,45 @@ body.worker-mode .video-container {
     100% { opacity: 0; }
 }
 
-/* --- Worker idle screen (Lumon theme) --- */
-.worker-idle-message {
-    width: 100vw;
-    min-height: 100vh;
-    background: var(--lumon-sage);
-    z-index: 20;
+/* --- Worker screen content wrapper (clipped during iris transition) --- */
+.worker-screen-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+}
+
+
+#worker-idle-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding: 40px 20px;
+}
+
+#worker-active-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Worker idle screen (Lumon theme) --- */
+.worker-idle-message {
+    position: relative;
+    width: 100vw;
+    min-height: 100vh;
+    background: var(--lumon-sage);
+    z-index: 20;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow: hidden;
 }
 
 /* ::before reserved for ripple plugin canvas */
 .worker-idle-message::before {
     display: none;
-}
-
-/* Vignette overlay */
-
-/* Content sits above overlays */
-.worker-idle-message > * {
-    position: relative;
-    z-index: 3;
-}
-
-.worker-idle-logo {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 160px;
-}
-
-.worker-idle-logo svg {
-    width: 100%;
-    height: auto;
-    fill: #fff;
-    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
 }
 
 .worker-idle-slogan {
@@ -1832,9 +1848,6 @@ body.worker-mode .video-container {
     min-height: 100vh;
     background: var(--lumon-sage);
     z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
 }
 
@@ -1956,7 +1969,7 @@ body.lobby-mode {
 }
 
 body.lobby-mode:active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='10' fill='rgba(255,255,255,0.2)'/%3E%3Ccircle cx='20' cy='20' r='7' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='20' cy='20' r='4' fill='white'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 /* Override pointer cursor on ALL clickable elements in lobby mode */
@@ -1969,7 +1982,7 @@ body.lobby-mode [role="button"],
 body.lobby-mode [tabindex]:not([tabindex="-1"]),
 body.lobby-mode [onclick],
 body.lobby-mode .clickable {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.04)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 body.lobby-mode button:active,
@@ -1981,7 +1994,7 @@ body.lobby-mode [role="button"]:active,
 body.lobby-mode [tabindex]:not([tabindex="-1"]):active,
 body.lobby-mode [onclick]:active,
 body.lobby-mode .clickable:active {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.15)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='white' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='white' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 body.lobby-mode::before {
@@ -2090,7 +2103,7 @@ body.lobby-mode::before {
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: background 0.2s, border-color 0.2s;
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='rgba(255,255,255,0.04)'/%3E%3Ccircle cx='20' cy='20' r='14' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='20' cy='20' r='11' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='20' cy='20' r='9' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E") 20 20, auto;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 12 12, auto;
 }
 
 .lobby-field button:hover {
