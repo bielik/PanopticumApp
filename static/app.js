@@ -2169,4 +2169,26 @@
     if (MODE === "controller") {
         typeCtrlSlogan();
     }
+
+    // =========================================================================
+    // Logo credits
+    // =========================================================================
+    var logoEl = document.querySelector(".active-logo") || document.querySelector(".worker-logo");
+    if (logoEl) {
+        var creditsEl = document.createElement("div");
+        creditsEl.className = "logo-credits";
+        creditsEl.innerHTML = '<span>Created by Martin Bielik<br>with no bad intentions.</span>';
+        logoEl.appendChild(creditsEl);
+        logoEl.style.cursor = "pointer";
+
+        var _creditsTimer = null;
+        logoEl.addEventListener("click", function () {
+            if (_creditsTimer) clearTimeout(_creditsTimer);
+            creditsEl.classList.add("visible");
+            _creditsTimer = setTimeout(function () {
+                creditsEl.classList.remove("visible");
+                _creditsTimer = null;
+            }, 5000);
+        });
+    }
 })();

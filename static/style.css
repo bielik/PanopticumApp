@@ -1713,7 +1713,6 @@ body.worker-mode .video-container {
     transform: translateX(-50%);
     width: 160px;
     z-index: 9999;
-    pointer-events: none;
 }
 
 .worker-logo svg {
@@ -1940,6 +1939,35 @@ body.worker-mode .video-container {
     height: auto;
     fill: #fff;
     filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+}
+
+/* --- Logo credits overlay --- */
+.logo-credits {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(33, 53, 37, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.logo-credits.visible {
+    opacity: 1;
+}
+
+.logo-credits span {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #fff;
+    text-align: center;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+    padding: 4px 8px;
 }
 
 @keyframes circle-pulse {
