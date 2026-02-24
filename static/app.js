@@ -688,12 +688,12 @@
     // =========================================================================
     // Frost tile game (worker active screen)
     // =========================================================================
-    var FROST_COLS = 10;
-    var FROST_ROWS = 8;
-    var FROST_TOTAL = FROST_COLS * FROST_ROWS;
+    var FROST_TARGET_TILE_PX = 80;  // ideal tile size in CSS pixels
     var FROST_TIMEOUT = 20000;
     var _frostHeatStrength = 0.7;
 
+    var _frostCols = 0;
+    var _frostRows = 0;
     var _frostTiles = null;    // Float64Array — last-hover timestamp per tile
     var _frostFrozen = null;   // Uint8Array — 0=warm, 1=frozen
     var _frostCanvas = null;
@@ -709,24 +709,33 @@
     var _frostLastFrame = 0;
     var _frostDebug = false;  // toggle: window._frostDebug = true in console
 
+    function frostComputeGrid(width, height) {
+        var cols = Math.round(width / FROST_TARGET_TILE_PX);
+        var rows = Math.round(height / FROST_TARGET_TILE_PX);
+        // Round to nearest even, minimum 2
+        cols = Math.max(2, Math.round(cols / 2) * 2);
+        rows = Math.max(2, Math.round(rows / 2) * 2);
+        return { cols: cols, rows: rows };
+    }
+
     function frostGridGeometry() {
-        if (!_frostCanvas) return { tileW: 0, tileH: 0 };
+        if (!_frostCanvas || !_frostCols) return { tileW: 0, tileH: 0 };
         return {
-            tileW: _frostCanvas.width / FROST_COLS,
-            tileH: _frostCanvas.height / FROST_ROWS
+            tileW: _frostCanvas.width / _frostCols,
+            tileH: _frostCanvas.height / _frostRows
         };
     }
 
     function frostTileFromMouse(clientX, clientY) {
-        if (!_frostCanvas) return -1;
+        if (!_frostCanvas || !_frostCols) return -1;
         var rect = _frostCanvas.getBoundingClientRect();
         var x = (clientX - rect.left) * (_frostCanvas.width / rect.width);
         var y = (clientY - rect.top) * (_frostCanvas.height / rect.height);
         if (x < 0 || y < 0 || x >= _frostCanvas.width || y >= _frostCanvas.height) return -1;
-        var col = Math.floor(x / (_frostCanvas.width / FROST_COLS));
-        var row = Math.floor(y / (_frostCanvas.height / FROST_ROWS));
-        if (col < 0 || col >= FROST_COLS || row < 0 || row >= FROST_ROWS) return -1;
-        return row * FROST_COLS + col;
+        var col = Math.floor(x / (_frostCanvas.width / _frostCols));
+        var row = Math.floor(y / (_frostCanvas.height / _frostRows));
+        if (col < 0 || col >= _frostCols || row < 0 || row >= _frostRows) return -1;
+        return row * _frostCols + col;
     }
 
     function frostOnMouseMove(e) {
@@ -740,6 +749,7 @@
     function frostRenderLoop() {
         if (!_frostActive) return;
         var now = Date.now();
+        var total = _frostCols * _frostRows;
         var geo = frostGridGeometry();
         var tw = geo.tileW;
         var th = geo.tileH;
@@ -750,16 +760,16 @@
         var dt = _frostLastFrame > 0 ? now - _frostLastFrame : 0;
         _frostLastFrame = now;
         var dbg = window._frostDebug;
-        var heatMap = dbg ? new Float32Array(FROST_TOTAL) : null;
+        var heatMap = dbg ? new Float32Array(total) : null;
 
         if (_frostMouseX > -9000) {
             var rect = _frostCanvas.getBoundingClientRect();
-            var tileCssW = rect.width / FROST_COLS;
-            var tileCssH = rect.height / FROST_ROWS;
+            var tileCssW = rect.width / _frostCols;
+            var tileCssH = rect.height / _frostRows;
             var HEAT_RADIUS = 150;
-            for (var i = 0; i < FROST_TOTAL; i++) {
-                var col = i % FROST_COLS;
-                var row = Math.floor(i / FROST_COLS);
+            for (var i = 0; i < total; i++) {
+                var col = i % _frostCols;
+                var row = Math.floor(i / _frostCols);
                 var cx = (col + 0.5) * tileCssW;
                 var cy = (row + 0.5) * tileCssH;
                 var dist = Math.sqrt((_frostMouseX - cx) * (_frostMouseX - cx) + (_frostMouseY - cy) * (_frostMouseY - cy));
@@ -778,11 +788,11 @@
 
         var frozenCount = 0;
 
-        for (var i = 0; i < FROST_TOTAL; i++) {
+        for (var i = 0; i < total; i++) {
             var age = now - _frostTiles[i];
             if (age <= 0) continue; // fully warm — draw nothing
-            var col = i % FROST_COLS;
-            var row = Math.floor(i / FROST_COLS);
+            var col = i % _frostCols;
+            var row = Math.floor(i / _frostCols);
             var x = col * tw;
             var y = row * th;
 
@@ -814,9 +824,9 @@
             }
         }
 
-        frostUpdateScore(FROST_TOTAL - frozenCount);
+        frostUpdateScore(total - frozenCount);
 
-        if (!_frostGameOver && frozenCount >= FROST_TOTAL) {
+        if (!_frostGameOver && frozenCount >= total) {
             frostOnGameOver();
         }
 
@@ -826,23 +836,65 @@
     function frostUpdateScore(unfrozen) {
         if (!_frostScoreEl) return;
         if (_frostGameOver) return;
+        var total = _frostCols * _frostRows;
         var heatPct = Math.round(_frostHeatStrength * 100);
-        _frostScoreEl.textContent = unfrozen + " / " + FROST_TOTAL + "  heat:" + heatPct + "%";
+        _frostScoreEl.textContent = unfrozen + " / " + total + "  heat:" + heatPct + "%";
     }
 
     function frostOnGameOver() {
         _frostGameOver = true;
         if (_frostScoreEl) {
-            _frostScoreEl.textContent = "0 / " + FROST_TOTAL + " \u2014 TERMINATED";
+            var total = _frostCols * _frostRows;
+            _frostScoreEl.textContent = "0 / " + total + " \u2014 TERMINATED";
             _frostScoreEl.style.color = "#ef4444";
         }
     }
 
-    function frostResizeCanvas() {
+    function frostResizeAndRemap() {
         if (!_frostCanvas) return;
         var rect = _frostCanvas.getBoundingClientRect();
         _frostCanvas.width = rect.width;
         _frostCanvas.height = rect.height;
+
+        var grid = frostComputeGrid(rect.width, rect.height);
+        if (grid.cols === _frostCols && grid.rows === _frostRows) return;
+
+        // Remap old tile state to new grid via nearest-neighbor spatial mapping
+        var oldCols = _frostCols;
+        var oldRows = _frostRows;
+        var oldTiles = _frostTiles;
+        var oldFrozen = _frostFrozen;
+        var newCols = grid.cols;
+        var newRows = grid.rows;
+        var newTotal = newCols * newRows;
+        var newTiles = new Float64Array(newTotal);
+        var newFrozen = new Uint8Array(newTotal);
+        var now = Date.now();
+
+        for (var i = 0; i < newTotal; i++) {
+            if (!oldTiles || !oldCols || !oldRows) {
+                // No old state — initialize as warm
+                newTiles[i] = now;
+                newFrozen[i] = 0;
+            } else {
+                var nc = i % newCols;
+                var nr = Math.floor(i / newCols);
+                // Normalized center of the new tile
+                var nx = (nc + 0.5) / newCols;
+                var ny = (nr + 0.5) / newRows;
+                // Find nearest old tile
+                var oc = Math.min(Math.floor(nx * oldCols), oldCols - 1);
+                var or_ = Math.min(Math.floor(ny * oldRows), oldRows - 1);
+                var oldIdx = or_ * oldCols + oc;
+                newTiles[i] = oldTiles[oldIdx];
+                newFrozen[i] = oldFrozen[oldIdx];
+            }
+        }
+
+        _frostCols = newCols;
+        _frostRows = newRows;
+        _frostTiles = newTiles;
+        _frostFrozen = newFrozen;
     }
 
     function initFrostGame() {
@@ -851,12 +903,19 @@
         if (!_frostCanvas) return;
         _frostCtx = _frostCanvas.getContext("2d");
 
-        frostResizeCanvas();
+        var rect = _frostCanvas.getBoundingClientRect();
+        _frostCanvas.width = rect.width;
+        _frostCanvas.height = rect.height;
+
+        var grid = frostComputeGrid(rect.width, rect.height);
+        _frostCols = grid.cols;
+        _frostRows = grid.rows;
+        var total = _frostCols * _frostRows;
 
         var now = Date.now();
-        _frostTiles = new Float64Array(FROST_TOTAL);
-        _frostFrozen = new Uint8Array(FROST_TOTAL);
-        for (var i = 0; i < FROST_TOTAL; i++) {
+        _frostTiles = new Float64Array(total);
+        _frostFrozen = new Uint8Array(total);
+        for (var i = 0; i < total; i++) {
             _frostTiles[i] = now;
             _frostFrozen[i] = 0;
         }
@@ -865,14 +924,14 @@
         _frostActive = true;
         if (_frostScoreEl) {
             _frostScoreEl.style.color = "#fff";
-            _frostScoreEl.textContent = FROST_TOTAL + " / " + FROST_TOTAL;
+            _frostScoreEl.textContent = total + " / " + total;
         }
 
         _frostMoveHandler = frostOnMouseMove;
         var screen = document.getElementById("worker-active-screen");
         if (screen) screen.addEventListener("mousemove", _frostMoveHandler);
 
-        _frostResizeHandler = frostResizeCanvas;
+        _frostResizeHandler = frostResizeAndRemap;
         window.addEventListener("resize", _frostResizeHandler);
 
         _frostAnimFrame = requestAnimationFrame(frostRenderLoop);
@@ -899,6 +958,8 @@
         _frostCanvas = null;
         _frostCtx = null;
         _frostScoreEl = null;
+        _frostCols = 0;
+        _frostRows = 0;
         _frostTiles = null;
         _frostFrozen = null;
         _frostGameOver = false;

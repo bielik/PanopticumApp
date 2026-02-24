@@ -191,6 +191,12 @@ Pipeline activation and work mode are **two independent concerns** on the worker
 
 **Room fields:** `work_active` (bool), `_work_version` (change counter for SSE).
 
+**Frost tile grid** is responsive — tiles are always as close to square as possible:
+- `FROST_TARGET_TILE_PX = 80` — target tile size in CSS pixels.
+- `frostComputeGrid(width, height)` computes cols/rows from canvas dimensions, rounding both to **even numbers** (min 2).
+- On window resize, `frostResizeAndRemap()` recomputes the grid and performs a **nearest-neighbor spatial remap** of tile state (timestamps + frozen flags) from old grid to new grid, preserving the frost pattern.
+- Grid dimensions are mutable (`_frostCols`, `_frostRows`), not constants.
+
 ## Dev Setup
 
 ```bash
