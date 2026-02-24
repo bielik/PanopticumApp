@@ -384,8 +384,9 @@
     // Client list rendering
     // =========================================================================
     function renderClientList(clients) {
-        // Update worker label for info line
+        // Update worker label and registration state
         _workerLabel = null;
+        _workerRegistered = false;
         if (clients) {
             for (var w = 0; w < clients.length; w++) {
                 if (clients[w].role === "worker") {
@@ -393,6 +394,7 @@
                     // Default labels like "Worker (Win32)" mean no Employee ID registered
                     if (lbl && !/^Worker\s*\(/.test(lbl)) {
                         _workerLabel = lbl;
+                        _workerRegistered = true;
                     } else {
                         _workerLabel = "NOT REGISTERED";
                     }
@@ -401,6 +403,7 @@
             }
         }
         updateWorkerInfo();
+        updateStartButtonState();
 
         if (!clientListEl) return;
 
@@ -414,9 +417,19 @@
             var c = clients[i];
             var isMe = c.id === CLIENT_ID;
             var cls = "client-item";
+            var displayLabel;
+            if (c.role === "worker") {
+                if (!c.label || /^Worker\s*\(/.test(c.label)) {
+                    displayLabel = "Worker (not registered)";
+                } else {
+                    displayLabel = "Worker (" + c.label + ")";
+                }
+            } else {
+                displayLabel = c.label || c.id.slice(0, 8);
+            }
 
             html += '<div class="' + cls + '">';
-            html += '<span class="client-item-label">' + escapeHtml(c.label || c.id.slice(0, 8)) + '</span>';
+            html += '<span class="client-item-label">' + escapeHtml(displayLabel) + '</span>';
             if (isMe) {
                 html += '<span class="client-you-tag">You</span>';
             }
@@ -451,6 +464,7 @@
     updateIdleClock();
 
     var _workerLabel = null;
+    var _workerRegistered = false;
 
     function updateWorkerInfo() {
         if (!workerInfoEl) return;
@@ -1132,6 +1146,11 @@
     // =========================================================================
     // Start/Stop
     // =========================================================================
+    function updateStartButtonState() {
+        if (!startStopBtn || isActive) return;
+        startStopBtn.disabled = !_workerRegistered;
+    }
+
     function updateStartStopButton(active) {
         isActive = active;
         if (!startStopBtn) return;
@@ -1139,10 +1158,12 @@
             startStopBtn.textContent = "STOP PANOPTICUM";
             startStopBtn.classList.remove("inactive");
             startStopBtn.classList.add("active");
+            startStopBtn.disabled = false;
         } else {
             startStopBtn.textContent = "START PANOPTICUM";
             startStopBtn.classList.remove("active");
             startStopBtn.classList.add("inactive");
+            startStopBtn.disabled = !_workerRegistered;
         }
     }
 

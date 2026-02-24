@@ -143,6 +143,7 @@ Key points:
 - Heartbeat every 10s, stale cleanup every 5s (15s timeout)
 - `_clients_version` counter triggers SSE `clients` events
 - When worker disconnects, source is cleared (controller circle goes white)
+- **Worker registration gate:** Workers connect with a generic label initially ("Worker (Win32)"). Device list shows "Worker (not registered)" until the employee enters their ID. Start Panopticum button is `disabled` until a worker registers with a name. Device list shows "Worker (Name)" after registration. `_workerRegistered` flag tracks this state.
 
 ### Action Mode
 AI issues physical directives and verifies compliance via the camera.
