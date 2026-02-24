@@ -1601,6 +1601,15 @@ body.worker-mode .video-container {
     color: #fff;
 }
 
+.worker-id-edit {
+    pointer-events: auto;
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+}
+.worker-id-edit:hover {
+    color: #fff;
+}
+
 .copy-tooltip {
     position: fixed;
     font-family: 'Share Tech Mono', monospace;

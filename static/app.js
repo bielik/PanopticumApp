@@ -473,7 +473,11 @@
         if (MODE === "controller") {
             parts.push("WORKER: " + escapeHtml(_workerLabel || "NOT CONNECTED"));
         } else {
-            parts.push("ID: " + escapeHtml(STORED_WORKER_ID || "NOT REGISTERED"));
+            if (STORED_WORKER_ID) {
+                parts.push('ID: <span class="worker-id-edit">' + escapeHtml(STORED_WORKER_ID) + '</span>');
+            } else {
+                parts.push("ID: NOT REGISTERED");
+            }
         }
         workerInfoEl.innerHTML = parts.join("  /  ");
     }
@@ -483,6 +487,20 @@
     if (workerInfoEl) {
         workerInfoEl.addEventListener("click", function (e) {
             var target = e.target;
+            if (target.classList.contains("worker-id-edit")) {
+                if (workerIdleMessage && workerIdleMessage.style.display !== "none") {
+                    var idBox = document.querySelector(".worker-idle-id");
+                    if (idBox) {
+                        idBox.classList.add("visible");
+                        if (workerIdInput && STORED_WORKER_ID) {
+                            workerIdInput.value = STORED_WORKER_ID;
+                            workerIdInput.focus();
+                        }
+                        if (workerIdBtn) workerIdBtn.textContent = "REGISTER";
+                    }
+                }
+                return;
+            }
             if (!target.classList.contains("room-code-copy")) return;
             navigator.clipboard.writeText(ROOM).then(function () {
                 var tip = document.createElement("span");
@@ -522,7 +540,7 @@
                 sloganEl.classList.remove("typing");
                 sloganEl.classList.add("typed");
                 var idBox = document.querySelector(".worker-idle-id");
-                if (idBox) idBox.classList.add("visible");
+                if (idBox && !STORED_WORKER_ID) idBox.classList.add("visible");
                 var statusText = document.getElementById("worker-idle-status-text");
                 if (statusText) {
                     statusText.style.display = "";
@@ -566,7 +584,10 @@
         }).then(function () {
             if (workerIdBtn) {
                 workerIdBtn.textContent = "REGISTERED";
-                setTimeout(function () { workerIdBtn.textContent = "REGISTER"; }, 2000);
+            }
+            var idBox = document.querySelector(".worker-idle-id");
+            if (idBox) {
+                setTimeout(function () { idBox.classList.remove("visible"); }, 800);
             }
         }).catch(function (err) {
             console.warn("Worker ID registration error:", err);
