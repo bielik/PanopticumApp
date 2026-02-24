@@ -1816,13 +1816,31 @@
         if (MODE === "controller") {
             var circle = document.getElementById("ctrl-circle");
             if (data.active) {
-                startSnapshotPolling();
-                startCtrlRipples();
-                if (circle) circle.classList.add("active");
+                // Phase 1: hide slogan, shrink with passive styling
+                if (circle) circle.classList.add("shrinking");
+                // Phase 2: after shrink completes, apply active styling + start video
+                _ctrlActivateTimer = setTimeout(function () {
+                    _ctrlActivateTimer = null;
+                    if (!isActive) return; // guard: user may have stopped during shrink
+                    if (circle) {
+                        circle.classList.remove("shrinking");
+                        circle.classList.add("active");
+                    }
+                    startSnapshotPolling();
+                    startCtrlRipples();
+                }, 600); // matches CSS transition duration
             } else {
+                // Cancel phased activation if stop happens mid-shrink
+                if (_ctrlActivateTimer) {
+                    clearTimeout(_ctrlActivateTimer);
+                    _ctrlActivateTimer = null;
+                }
                 stopSnapshotPolling();
                 stopCtrlRipples();
-                if (circle) circle.classList.remove("active");
+                if (circle) {
+                    circle.classList.remove("shrinking");
+                    circle.classList.remove("active");
+                }
                 if (_streamCanvas && _streamCtx) {
                     _streamCtx.clearRect(0, 0, _streamCanvas.width, _streamCanvas.height);
                     _streamCanvas.style.display = "none";
@@ -2087,6 +2105,9 @@
     if (MODE === "worker") {
         setupWorker();
     }
+
+    // Controller circle phased activation timer
+    var _ctrlActivateTimer = null;
 
     // Controller circle typewriter
     var _ctrlSloganVersion = 0;
