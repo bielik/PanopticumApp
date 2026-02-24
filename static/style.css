@@ -1995,6 +1995,8 @@ body.lobby-mode::before {
     display: block;
     width: 100%;
     text-align: center;
+    padding-right: 100px;
+    box-sizing: border-box;
 }
 
 .lobby-error {
