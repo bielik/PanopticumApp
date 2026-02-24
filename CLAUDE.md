@@ -123,6 +123,8 @@ Key points:
 | `audio_robotic` | `{url: str}` | Robotic lyrics MP3 ready |
 | `clients` | `{clients: [...], active_source: str}` | Client join/leave/source switch |
 | `action_phase` | `{setting, phase, action}` | Action mode state changed |
+| `work` | `{active: bool}` | Work mode started/stopped |
+| `freeze_time` | `{value: float}` | Freeze time setting changed |
 
 ### Gemini Unified Mode
 `GeminiVision.describe_and_narrate()` handles everything in one API call:
@@ -167,6 +169,27 @@ AI issues physical directives and verifies compliance via the camera.
 **Analysis loop phases:** The loop branches on `room.action_phase`. Commenting phase runs existing `describe_and_narrate`. Requesting phase generates action + TTS then transitions to verifying. Verifying phase polls `verify_action` each cycle; on completion or 30s timeout, generates response + TTS and transitions back to commenting.
 
 **Frontend:** Action panel in controls bar with Manual/Automatic pills, phase badge (gray=commenting, amber=requesting/verifying), action text display, and "Request Action" trigger button (disabled during action).
+
+### Work Mode (Frost Game)
+Pipeline activation and work mode are **two independent concerns** on the worker screen:
+
+- **Pipeline (`active`)** controls the **worker active screen**: circle, ripples, commentary text. Managed by `updateWorkerIdleState()`.
+- **Work mode (`work_active`)** controls only the **frost tile game**. Managed by `updateFrostGameState()`.
+
+**Lifecycle:**
+1. START PANOPTICUM → worker shows active screen (circle, ripples, commentary). No frost tiles.
+2. START WORK → frost tiles appear on the active screen, timer starts.
+3. STOP WORK → frost tiles disappear, active screen remains visible.
+4. STOP PANOPTICUM → worker returns to idle. Work mode cascade-stops (server sets `work_active=false`).
+
+**Key rules:**
+- Work mode **cannot start** unless pipeline is active (server returns 400).
+- Pipeline stop **cascade-stops** work mode (server-side), but pipeline start does **not** auto-start work.
+- `updateWorkerIdleState(false)` also calls `destroyFrostGame()` as a safety net (cascade cleanup).
+
+**API:** `POST /room/{code}/api/work` — body: `{active: bool}`. Returns 400 if trying to start while pipeline is inactive.
+
+**Room fields:** `work_active` (bool), `_work_version` (change counter for SSE).
 
 ## Dev Setup
 
