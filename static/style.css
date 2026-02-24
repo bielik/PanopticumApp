@@ -680,6 +680,24 @@ body::after {
     opacity: 0.5;
 }
 
+/* --- Work tags in activity log --- */
+.work-tag {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+.work-start {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+}
+
+.work-end {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+    opacity: 0.7;
+}
+
 .message-log-item.action-entry {
     border-left: 3px solid #fbbf24;
 }
@@ -687,6 +705,15 @@ body::after {
 .message-log-item.action-entry.latest {
     border-left: 3px solid #fbbf24;
     background: rgba(251, 191, 36, 0.05);
+}
+
+.message-log-item.work-entry {
+    border-left: 3px solid #38bdf8;
+}
+
+.message-log-item.work-entry.latest {
+    border-left: 3px solid #38bdf8;
+    background: rgba(56, 189, 248, 0.05);
 }
 
 .message-log-item.skipped .message-log-time::after {
@@ -725,6 +752,15 @@ body::after {
 .action-phase-label.phase-requesting,
 .action-phase-label.phase-verifying {
     color: #fbbf24;
+}
+
+.action-phase-label.phase-working {
+    color: #38bdf8;
+}
+
+.action-phase-label.phase-standby {
+    color: rgba(255, 255, 255, 0.4);
+    text-shadow: none;
 }
 
 .action-requested-text {

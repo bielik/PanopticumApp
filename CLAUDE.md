@@ -198,6 +198,17 @@ AI issues physical directives and verifies compliance via the camera.
 
 **Frontend:** Action panel in controls bar with Manual/Automatic pills, phase badge (gray=commenting, amber=requesting/verifying), action text display, and "Request Action" trigger button (disabled during action).
 
+**Controller phase label** (`updatePhaseLabel()`) — unified priority-based label in App Status:
+- Pipeline inactive → **"Standby"** (dimmed white, no glow, `.phase-standby`)
+- Work mode active → **"Working"** (frost blue `#38bdf8`, `.phase-working`)
+- Action requesting/verifying → **"Requesting"/"Verifying"** (amber `#fbbf24`, `.phase-requesting`/`.phase-verifying`)
+- Default (active, observing) → **"Observing"** (white with glow)
+
+**Work mode log entries** — SSE `work` event adds activity log entries with frost-blue stripe and badge:
+- Work starts → "Work session started" with `[Work]` tag (`.work-start`, `.work-entry`)
+- Work stops → "Work session ended" with `[End Work]` tag (`.work-end`, `.work-entry`)
+- Mirrors action mode's amber stripe pattern but in `#38bdf8` frost blue
+
 ### Work Mode (Frost Game)
 Pipeline activation and work mode are **two independent concerns** on the worker screen:
 

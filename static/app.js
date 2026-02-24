@@ -1334,6 +1334,7 @@
 
     function updateStartStopButton(active) {
         isActive = active;
+        updatePhaseLabel();
         if (!startStopBtn) return;
         if (active) {
             startStopBtn.textContent = "STOP PANOPTICUM";
@@ -1350,6 +1351,7 @@
 
     function updateWorkButton(active) {
         isWorkActive = active;
+        updatePhaseLabel();
         if (!workBtn) return;
         if (active) {
             workBtn.textContent = "STOP WORK";
@@ -1602,6 +1604,12 @@
         return "";
     }
 
+    function workTag(descType) {
+        if (descType === "work_start") return ' <span class="tone-tag work-tag work-start">Work</span>';
+        if (descType === "work_end") return ' <span class="tone-tag work-tag work-end">End Work</span>';
+        return "";
+    }
+
     var _logTypeTimer = null;
 
     function renderMessageLog(animate) {
@@ -1615,14 +1623,18 @@
         for (var i = 0; i < messageLog.length; i++) {
             var msg = messageLog[i];
             var cls = "message-log-item";
-            if (msg.descType && msg.descType !== "commentary") cls += " action-entry";
+            if (msg.descType === "work_start" || msg.descType === "work_end") {
+                cls += " work-entry";
+            } else if (msg.descType && msg.descType !== "commentary") {
+                cls += " action-entry";
+            }
             if (i === 0) {
                 cls += " latest";
             } else if (!msg.played && msg.serverTimestamp) {
                 cls += " skipped";
             }
             html += '<div class="' + cls + '">';
-            html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + actionTag(msg.descType) + '</span>';
+            html += '<span class="message-log-time">' + (msg.time || "") + ' ' + toneLabel(msg.tone) + actionTag(msg.descType) + workTag(msg.descType) + '</span>';
             html += '<span class="message-log-text">' + (i === 0 && animate ? '' : escapeHtml(msg.text)) + '</span>';
             html += '</div>';
         }
@@ -1694,15 +1706,29 @@
         });
     }
 
+    function updatePhaseLabel() {
+        if (!actionPhaseLabel) return;
+        actionPhaseLabel.className = "action-phase-label";
+        if (!isActive) {
+            actionPhaseLabel.textContent = "Standby";
+            actionPhaseLabel.classList.add("phase-standby");
+        } else if (isWorkActive) {
+            actionPhaseLabel.textContent = "Working";
+            actionPhaseLabel.classList.add("phase-working");
+        } else if (currentActionPhase === "action_requesting") {
+            actionPhaseLabel.textContent = "Requesting";
+            actionPhaseLabel.classList.add("phase-requesting");
+        } else if (currentActionPhase === "action_verifying") {
+            actionPhaseLabel.textContent = "Verifying";
+            actionPhaseLabel.classList.add("phase-verifying");
+        } else {
+            actionPhaseLabel.textContent = "Observing";
+        }
+    }
+
     function updateActionPhaseUI(phase, action) {
         currentActionPhase = phase;
-        if (actionPhaseLabel) {
-            var labels = { "commenting": "Commenting", "action_requesting": "Requesting", "action_verifying": "Verifying" };
-            actionPhaseLabel.textContent = labels[phase] || phase;
-            actionPhaseLabel.className = "action-phase-label";
-            if (phase === "action_requesting") actionPhaseLabel.classList.add("phase-requesting");
-            if (phase === "action_verifying") actionPhaseLabel.classList.add("phase-verifying");
-        }
+        updatePhaseLabel();
         if (actionRequestedText) {
             actionRequestedText.textContent = action || "";
         }
@@ -1966,7 +1992,10 @@
         var data = JSON.parse(e.data);
         updateWorkButton(data.active);
         updateFrostGameState(data.active);
-        if (!data.active) {
+        if (data.active) {
+            addToMessageLog("Work session started", 0.5, null, "work_start");
+        } else {
+            addToMessageLog("Work session ended", 0.5, null, "work_end");
             updateWorkScoreDisplay(null);
         }
     });
