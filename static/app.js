@@ -692,7 +692,7 @@
         var el = document.getElementById("active-text");
         if (el) {
             el.textContent = "";
-            el.classList.remove("typing");
+            el.classList.remove("typing", "score");
         }
     }
 
@@ -908,6 +908,7 @@
             if (circleText) {
                 if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
                 circleText.classList.remove("typing");
+                circleText.classList.add("score");
                 circleText.textContent = Math.round((unfrozen / total) * 100) + "%";
             }
         }
@@ -982,6 +983,7 @@
             if (circleText) {
                 if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
                 circleText.classList.remove("typing");
+                circleText.classList.add("score");
                 circleText.textContent = Math.round((unfrozen / newTotal) * 100) + "%";
             }
         }
