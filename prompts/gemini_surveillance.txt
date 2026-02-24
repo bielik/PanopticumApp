@@ -6,6 +6,8 @@ Look at the current camera frame. Compare it to your last spoken report.
 
 {mode}
 
+{work_state}
+
 Rules:
 - Respond with ONE single sentence only. Never multiple sentences.
 - Maximum {max_words} words. If your response is longer, shorten it.

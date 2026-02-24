@@ -108,6 +108,7 @@ class Room:
     work_score_rows: int = 0
     work_score_tiles: str = ""          # base64-encoded Uint8Array of frost progress (0-255)
     _work_score_version: int = 0
+    work_score_prev_pct: float = 0.0       # previous score % for trajectory detection
 
     # Audio files: timestamp -> mp3 bytes
     audio_files: dict = field(default_factory=dict)

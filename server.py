@@ -337,6 +337,7 @@ async def room_set_active(code: str, req: ActiveRequest):
         room.work_score_cols = 0
         room.work_score_rows = 0
         room.work_score_tiles = ""
+        room.work_score_prev_pct = 0.0
         room._work_score_version += 1
 
     # Start or stop analysis loop
@@ -363,6 +364,7 @@ async def room_set_work(code: str, req: WorkRequest):
         room.work_score_cols = 0
         room.work_score_rows = 0
         room.work_score_tiles = ""
+        room.work_score_prev_pct = 0.0
         room._work_score_version += 1
     room.touch()
     log.info(f"[{code}] Work mode {'STARTED' if req.active else 'STOPPED'}")
@@ -883,7 +885,34 @@ async def _analysis_loop(room: Room):
                 log.info(f"[{code}] Cycle start: phase={phase}, elapsed_since_start={time.time() - cycle_start:.1f}s")
 
                 if phase == "commenting":
-                    # --- COMMENTING phase (existing behavior) ---
+                    # --- COMMENTING phase ---
+                    # Build work context for Gemini if work session is active
+                    work_context = ""
+                    if room.work_active and room.work_score_total > 0:
+                        pct = round((room.work_score_unfrozen / room.work_score_total) * 100)
+                        frozen_pct = 100 - pct
+                        prev = room.work_score_prev_pct
+                        if pct > prev + 3:
+                            trajectory = "rising"
+                        elif pct < prev - 3:
+                            trajectory = "falling — the screen is re-freezing"
+                        else:
+                            trajectory = "stagnant"
+                        work_context = (
+                            "[WORK SESSION ACTIVE] The employee is performing a screen defrosting task. "
+                            "They must move their cursor to melt frozen tiles on their screen. "
+                            f"Current progress: {pct}% defrosted ({frozen_pct}% still frozen). "
+                            f"Trend: {trajectory}. "
+                            "Incorporate this score into your observation naturally — "
+                            "do not just recite numbers."
+                        )
+                        room.work_score_prev_pct = pct
+                    elif room.work_active:
+                        work_context = (
+                            "[WORK SESSION ACTIVE] The employee has just been assigned a screen defrosting task. "
+                            "The work session has just begun."
+                        )
+
                     t0 = time.time()
                     narration = await asyncio.get_event_loop().run_in_executor(
                         None,
@@ -891,6 +920,7 @@ async def _analysis_loop(room: Room):
                         jpeg_bytes,
                         room.tone_preamble,
                         room.comment_length,
+                        work_context,
                     )
                     gemini_time = time.time() - t0
                     log.info(f"[{code}] Gemini describe_and_narrate: {gemini_time:.1f}s -> {'NO_CHANGE' if narration is None else repr(narration[:60])}")

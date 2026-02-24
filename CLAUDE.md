@@ -134,6 +134,7 @@ Key points:
 - Stale timeout: forces description if silent for 10+ seconds
 - Long response guard: if response exceeds 20 words, discards it and retries with blank context (no prior comment)
 - Tone preamble prepended to prompt based on slider value
+- **Work session awareness:** During active work mode, the analysis loop passes a `work_context` string describing the frost game state (score %, trajectory). Injected via `{work_state}` placeholder in `prompts/gemini_surveillance.txt`. Gemini naturally incorporates score into commentary — tone system still applies (supportive praises, judgmental criticizes). Trajectory tracked via `room.work_score_prev_pct` with 3% deadband to avoid jitter.
 
 ### Multi-Client System
 - Clients register with UUID, role (controller/worker), and label

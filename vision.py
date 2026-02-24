@@ -109,7 +109,7 @@ class GeminiVision:
         """Check if the response indicates no change."""
         return "NOCHANGE" in text.upper().replace("_", "").replace(" ", "")
 
-    def describe_and_narrate(self, jpeg_bytes: bytes, tone_preamble: str = "", max_words: int = 10) -> str | None:
+    def describe_and_narrate(self, jpeg_bytes: bytes, tone_preamble: str = "", max_words: int = 10, work_context: str = "") -> str | None:
         """Single-call vision + narration with memory. Returns narration or None."""
         from google.genai import types
 
@@ -150,6 +150,7 @@ class GeminiVision:
             last_spoken=self.last_spoken or "(nothing yet)",
             mode=mode_text,
             max_words=max_words,
+            work_state=work_context or "",
         )
 
         # Prepend tone modifier if provided
@@ -181,6 +182,7 @@ class GeminiVision:
                 last_spoken="(nothing yet)",
                 mode=f"Describe what you see in one brief sentence, maximum {retry_max} words.",
                 max_words=max_words,
+                work_state=work_context or "",
             )
             if tone_preamble:
                 retry_prompt = tone_preamble + "\n" + retry_prompt
