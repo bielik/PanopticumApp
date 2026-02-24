@@ -75,6 +75,8 @@
     var heatStrengthValue = document.getElementById("heat-strength-value");
     var freezeTimeSlider = document.getElementById("freeze-time-slider");
     var freezeTimeValue = document.getElementById("freeze-time-value");
+    var heatRadiusSlider = document.getElementById("heat-radius-slider");
+    var heatRadiusValue = document.getElementById("heat-radius-value");
 
     // Camera elements (worker only — controller no longer captures video)
     var localVideo = document.getElementById("local-video");
@@ -702,6 +704,7 @@
     var FROST_TARGET_TILE_PX = 80;  // ideal tile size in CSS pixels
     var FROST_TIMEOUT = 20000;
     var _frostHeatStrength = 0.7;
+    var _frostHeatRadius = 150;
 
     var _frostCols = 0;
     var _frostRows = 0;
@@ -783,15 +786,15 @@
             var rect = _frostCanvas.getBoundingClientRect();
             var tileCssW = rect.width / _frostCols;
             var tileCssH = rect.height / _frostRows;
-            var HEAT_RADIUS = 150;
+            var heatRadius = _frostHeatRadius;
             for (var i = 0; i < total; i++) {
                 var col = i % _frostCols;
                 var row = Math.floor(i / _frostCols);
                 var cx = (col + 0.5) * tileCssW;
                 var cy = (row + 0.5) * tileCssH;
                 var dist = Math.sqrt((_frostMouseX - cx) * (_frostMouseX - cx) + (_frostMouseY - cy) * (_frostMouseY - cy));
-                if (dist >= HEAT_RADIUS) continue;
-                var heat = (1 - dist / HEAT_RADIUS) * _frostHeatStrength;
+                if (dist >= heatRadius) continue;
+                var heat = (1 - dist / heatRadius) * _frostHeatStrength;
                 if (heatMap) heatMap[i] = heat;
                 // Push timestamp forward to slow aging (works from frame 1)
                 _frostTiles[i] = Math.min(now, _frostTiles[i] + heat * dt);
@@ -900,7 +903,7 @@
         var total = _frostCols * _frostRows;
         var heatPct = Math.round(_frostHeatStrength * 100);
         var freezeSec = Math.round(FROST_TIMEOUT / 1000);
-        _frostScoreEl.textContent = "heat:" + heatPct + "%  freeze:" + freezeSec + "s";
+        _frostScoreEl.textContent = "heat:" + heatPct + "%  freeze:" + freezeSec + "s  radius:" + Math.round(_frostHeatRadius) + "px";
 
         // Show score in circle when work is active
         if (isWorkActive) {
@@ -1361,6 +1364,25 @@
     }
     initBarSlider(document.getElementById("freeze-time-bar"), freezeTimeSlider);
 
+    // Heat radius slider
+    function updateHeatRadiusLabel(px) {
+        if (heatRadiusValue) heatRadiusValue.textContent = px + "px";
+    }
+    if (heatRadiusSlider) {
+        heatRadiusSlider.addEventListener("input", function () {
+            updateHeatRadiusLabel(parseInt(heatRadiusSlider.value, 10));
+        });
+        heatRadiusSlider.addEventListener("change", function () {
+            var px = parseInt(heatRadiusSlider.value, 10);
+            fetch(API + "/heat-radius", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ value: px }),
+            }).catch(function (err) { console.warn("Heat radius error:", err); });
+        });
+    }
+    initBarSlider(document.getElementById("heat-radius-bar"), heatRadiusSlider);
+
     // =========================================================================
     // Message log
     // =========================================================================
@@ -1704,6 +1726,15 @@
         }
     });
 
+    evtSource.addEventListener("heat_radius", function (e) {
+        var data = JSON.parse(e.data);
+        _frostHeatRadius = data.value;
+        if (heatRadiusSlider) {
+            heatRadiusSlider.value = Math.round(data.value);
+            heatRadiusSlider.dispatchEvent(new Event("input"));
+        }
+    });
+
     evtSource.addEventListener("work", function (e) {
         var data = JSON.parse(e.data);
         updateWorkButton(data.active);
@@ -1777,6 +1808,29 @@
                 if (commentLengthSlider) {
                     commentLengthSlider.value = data.comment_length;
                     commentLengthSlider.dispatchEvent(new Event("input"));
+                }
+            }
+
+            // Frost game settings initial state
+            if (data.heat_strength !== undefined) {
+                _frostHeatStrength = data.heat_strength;
+                if (heatStrengthSlider) {
+                    heatStrengthSlider.value = Math.round(data.heat_strength * 100);
+                    heatStrengthSlider.dispatchEvent(new Event("input"));
+                }
+            }
+            if (data.freeze_time !== undefined) {
+                FROST_TIMEOUT = data.freeze_time * 1000;
+                if (freezeTimeSlider) {
+                    freezeTimeSlider.value = Math.round(data.freeze_time);
+                    freezeTimeSlider.dispatchEvent(new Event("input"));
+                }
+            }
+            if (data.heat_radius !== undefined) {
+                _frostHeatRadius = data.heat_radius;
+                if (heatRadiusSlider) {
+                    heatRadiusSlider.value = Math.round(data.heat_radius);
+                    heatRadiusSlider.dispatchEvent(new Event("input"));
                 }
             }
 

@@ -94,6 +94,8 @@ class Room:
     _heat_strength_version: int = 0
     freeze_time: float = 20.0              # frost game: seconds to fully freeze (5–60)
     _freeze_time_version: int = 0
+    heat_radius: float = 150.0             # frost game: cursor heat spread in CSS px (50–300)
+    _heat_radius_version: int = 0
 
     # Work mode (worker screen active/idle, independent from pipeline)
     work_active: bool = False

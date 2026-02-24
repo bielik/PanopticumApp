@@ -260,6 +260,9 @@ class HeatStrengthRequest(BaseModel):
 class FreezeTimeRequest(BaseModel):
     value: float
 
+class HeatRadiusRequest(BaseModel):
+    value: float
+
 class WorkRequest(BaseModel):
     active: bool
 
@@ -295,6 +298,9 @@ async def room_status(code: str):
         "work_score_cols": room.work_score_cols,
         "work_score_rows": room.work_score_rows,
         "work_score_tiles": room.work_score_tiles,
+        "heat_strength": room.heat_strength,
+        "heat_radius": room.heat_radius,
+        "freeze_time": room.freeze_time,
     }
 
 
@@ -472,6 +478,19 @@ async def room_set_freeze_time(code: str, req: FreezeTimeRequest):
     room._freeze_time_version += 1
     room.touch()
     log.info(f"[{code}] Freeze time: {value:.0f}s")
+    return {"value": value}
+
+
+@app.post("/room/{code}/api/heat-radius")
+async def room_set_heat_radius(code: str, req: HeatRadiusRequest):
+    room = get_room(code)
+    if not room:
+        return JSONResponse(status_code=404, content={"error": "Room not found"})
+    value = max(50.0, min(300.0, req.value))
+    room.heat_radius = value
+    room._heat_radius_version += 1
+    room.touch()
+    log.info(f"[{code}] Heat radius: {value:.0f}px")
     return {"value": value}
 
 
@@ -661,6 +680,7 @@ async def _sse_generator(room: Room):
     last_comment_length_version = -1
     last_heat_strength_version = -1
     last_freeze_time_version = -1
+    last_heat_radius_version = -1
     last_work_version = -1
     last_work_score_version = -1
     emitted_audio_keys: set = set()
@@ -745,6 +765,11 @@ async def _sse_generator(room: Room):
         if ft_version != last_freeze_time_version:
             last_freeze_time_version = ft_version
             events.append(("freeze_time", json.dumps({"value": room.freeze_time})))
+
+        hr_version = room._heat_radius_version
+        if hr_version != last_heat_radius_version:
+            last_heat_radius_version = hr_version
+            events.append(("heat_radius", json.dumps({"value": room.heat_radius})))
 
         work_version = room._work_version
         if work_version != last_work_version:

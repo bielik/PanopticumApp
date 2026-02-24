@@ -118,6 +118,14 @@
                         <input type="range" id="freeze-time-slider" min="5" max="60" step="1" value="20" style="display:none">
                     </div>
                 </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">Heat Radius</span>
+                    <div class="ctrl-bar-slider" id="heat-radius-bar">
+                        <div class="ctrl-bar-fill" id="heat-radius-fill"></div>
+                        <span class="ctrl-bar-text" id="heat-radius-value">150px</span>
+                        <input type="range" id="heat-radius-slider" min="50" max="300" step="10" value="150" style="display:none">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -128,7 +136,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="/static/jquery.ripples.js"></script>
-    <script src="/static/app.js?v=51"></script>
+    <script src="/static/app.js?v=52"></script>
     <script>
         try {
             var c = document.createElement('canvas');
