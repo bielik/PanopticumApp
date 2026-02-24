@@ -1992,6 +1992,9 @@ body.lobby-mode::before {
     color: rgba(255, 255, 255, 0.4);
     letter-spacing: 3px;
     margin: 2px 0;
+    display: block;
+    width: 100%;
+    text-align: center;
 }
 
 .lobby-error {

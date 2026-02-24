@@ -26,6 +26,18 @@ PANOPTICUM runs in two distinct modes depending on the context:
 | Video relay | Direct OpenCV → MJPEG | Browser → base64 POST → server MJPEG |
 | URL | `http://localhost:8000` | [huggingface.co/spaces/MartinBLK/Panopticum](https://huggingface.co/spaces/MartinBLK/Panopticum) |
 
+### Access the App
+
+**Local standalone** (`python main.py`):
+- Lobby / Controller: http://localhost:8000/
+- Worker: http://localhost:8000/worker
+
+**HuggingFace Spaces mode** (`uvicorn server:app --port 7860`):
+- Lobby: http://localhost:7860/
+- After creating a room, controller and worker links are shown in the lobby
+
+**Live deployment**: https://huggingface.co/spaces/MartinBLK/Panopticum
+
 ---
 
 ## Architecture
