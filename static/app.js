@@ -596,6 +596,8 @@
             }
             _lastUploadedScore = -1;
             clearActiveText();
+            var activeCircle = document.getElementById("active-circle");
+            if (activeCircle) activeCircle.style.background = "";
         }
     }
 
@@ -710,7 +712,6 @@
     var _frostScoreEl = null;
     var _frostAnimFrame = null;
     var _frostActive = false;
-    var _frostGameOver = false;
     var _frostMoveHandler = null;
     var _frostResizeHandler = null;
     var _frostMouseX = -9999;
@@ -750,11 +751,16 @@
     }
 
     function frostOnMouseMove(e) {
-        if (!_frostActive || _frostGameOver) return;
+        if (!_frostActive) return;
         if (!_frostCanvas) return;
         var rect = _frostCanvas.getBoundingClientRect();
         _frostMouseX = e.clientX - rect.left;
         _frostMouseY = e.clientY - rect.top;
+    }
+
+    function frostOnMouseLeave() {
+        _frostMouseX = -9999;
+        _frostMouseY = -9999;
     }
 
     function frostRenderLoop() {
@@ -814,13 +820,23 @@
 
             // Smooth linear ramp: 0 → 0.8 over the full FROST_TIMEOUT
             var progress = Math.min(age / FROST_TIMEOUT, 1);
-            var fillAlpha = progress * 0.8;
+            var fillAlpha = progress * 0.6;
             var strokeAlpha = Math.min(fillAlpha + 0.2, 1);
             _frostCtx.fillStyle = "rgba(255, 255, 255, " + fillAlpha.toFixed(3) + ")";
             _frostCtx.fillRect(x, y, tw, th);
             _frostCtx.strokeStyle = "rgba(255, 255, 255, " + strokeAlpha.toFixed(3) + ")";
             _frostCtx.lineWidth = 0.5;
             _frostCtx.strokeRect(x + 0.25, y + 0.25, tw - 0.5, th - 0.5);
+
+            // Diagonal cross on fully frozen cells
+            if (_frostFrozen[i]) {
+                _frostCtx.beginPath();
+                _frostCtx.moveTo(x, y);
+                _frostCtx.lineTo(x + tw, y + th);
+                _frostCtx.moveTo(x + tw, y);
+                _frostCtx.lineTo(x, y + th);
+                _frostCtx.stroke();
+            }
 
             // Debug overlay: per-tile age and heat
             if (dbg) {
@@ -837,8 +853,14 @@
 
         frostUpdateScore(total - frozenCount);
 
-        if (!_frostGameOver && frozenCount >= total) {
-            frostOnGameOver();
+        // Turn circle red when all tiles are frozen
+        var activeCircle = document.getElementById("active-circle");
+        if (activeCircle) {
+            if (frozenCount >= total) {
+                activeCircle.style.background = "#ac1a4e";
+            } else {
+                activeCircle.style.background = "";
+            }
         }
 
         _frostAnimFrame = requestAnimationFrame(frostRenderLoop);
@@ -875,7 +897,6 @@
 
     function frostUpdateScore(unfrozen) {
         if (!_frostScoreEl) return;
-        if (_frostGameOver) return;
         var total = _frostCols * _frostRows;
         var heatPct = Math.round(_frostHeatStrength * 100);
         var freezeSec = Math.round(FROST_TIMEOUT / 1000);
@@ -901,25 +922,6 @@
         }
     }
 
-    function frostOnGameOver() {
-        _frostGameOver = true;
-        var total = _frostCols * _frostRows;
-        if (_frostScoreEl) {
-            _frostScoreEl.textContent = "TERMINATED";
-            _frostScoreEl.style.color = "#ef4444";
-        }
-        // Update circle with terminal score
-        if (isWorkActive) {
-            var circleText = document.getElementById("active-text");
-            if (circleText) {
-                if (_activeWordTimer) { clearTimeout(_activeWordTimer); _activeWordTimer = null; }
-                circleText.classList.remove("typing");
-                circleText.textContent = "0%";
-            }
-        }
-        // Upload final score immediately
-        frostUploadScore(0);
-    }
 
     function frostResizeAndRemap() {
         if (!_frostCanvas) return;
@@ -984,18 +986,6 @@
             }
         }
 
-        // Update game-over state for new grid
-        if (frozenCount >= newTotal) {
-            _frostGameOver = true;
-            if (_frostScoreEl) {
-                _frostScoreEl.textContent = "TERMINATED";
-                _frostScoreEl.style.color = "#ef4444";
-            }
-        } else {
-            _frostGameOver = false;
-            if (_frostScoreEl) _frostScoreEl.style.color = "#fff";
-        }
-
         // Force immediate upload to server
         _lastUploadedScore = -1;
         frostUploadScore(unfrozen);
@@ -1024,7 +1014,6 @@
             _frostFrozen[i] = 0;
         }
 
-        _frostGameOver = false;
         _frostActive = true;
         if (_frostScoreEl) {
             _frostScoreEl.style.color = "#fff";
@@ -1033,7 +1022,10 @@
 
         _frostMoveHandler = frostOnMouseMove;
         var screen = document.getElementById("worker-active-screen");
-        if (screen) screen.addEventListener("mousemove", _frostMoveHandler);
+        if (screen) {
+            screen.addEventListener("mousemove", _frostMoveHandler);
+            screen.addEventListener("mouseleave", frostOnMouseLeave);
+        }
 
         _frostResizeHandler = frostResizeAndRemap;
         window.addEventListener("resize", _frostResizeHandler);
@@ -1049,7 +1041,10 @@
         }
         if (_frostMoveHandler) {
             var screen = document.getElementById("worker-active-screen");
-            if (screen) screen.removeEventListener("mousemove", _frostMoveHandler);
+            if (screen) {
+                screen.removeEventListener("mousemove", _frostMoveHandler);
+                screen.removeEventListener("mouseleave", frostOnMouseLeave);
+            }
             _frostMoveHandler = null;
         }
         if (_frostResizeHandler) {
@@ -1066,7 +1061,6 @@
         _frostRows = 0;
         _frostTiles = null;
         _frostFrozen = null;
-        _frostGameOver = false;
         _frostMouseX = -9999;
         _frostMouseY = -9999;
         _frostLastFrame = 0;
@@ -1525,13 +1519,23 @@
                 var progress = arr[i] / 255;
                 if (progress <= 0) continue;
 
-                var fillAlpha = progress * 0.8;
+                var fillAlpha = progress * 0.6;
                 var strokeAlpha = Math.min(fillAlpha + 0.2, 1);
                 ctx.fillStyle = "rgba(255, 255, 255, " + fillAlpha.toFixed(3) + ")";
                 ctx.fillRect(x, y, cellW, cellH);
                 ctx.strokeStyle = "rgba(255, 255, 255, " + strokeAlpha.toFixed(3) + ")";
                 ctx.lineWidth = 0.5;
                 ctx.strokeRect(x + 0.25, y + 0.25, cellW - 0.5, cellH - 0.5);
+
+                // Diagonal cross on fully frozen cells
+                if (arr[i] >= 255) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + cellW, y + cellH);
+                    ctx.moveTo(x + cellW, y);
+                    ctx.lineTo(x, y + cellH);
+                    ctx.stroke();
+                }
             }
         }
 
