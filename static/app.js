@@ -2179,14 +2179,16 @@
         creditsEl.className = "logo-credits";
         creditsEl.innerHTML = '<span>Created by Martin Bielik<br>with no bad intentions.</span>';
         logoEl.appendChild(creditsEl);
-        logoEl.style.cursor = "pointer";
+        logoEl.classList.add("clickable");
 
         var _creditsTimer = null;
         logoEl.addEventListener("click", function () {
             if (_creditsTimer) clearTimeout(_creditsTimer);
             creditsEl.classList.add("visible");
+            logoEl.classList.add("credits-visible");
             _creditsTimer = setTimeout(function () {
                 creditsEl.classList.remove("visible");
+                logoEl.classList.remove("credits-visible");
                 _creditsTimer = null;
             }, 5000);
         });

@@ -1720,6 +1720,7 @@ body.worker-mode .video-container {
     height: auto;
     fill: #fff;
     filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+    transition: opacity 0.4s ease;
 }
 
 .copy-tooltip {
@@ -1939,35 +1940,43 @@ body.worker-mode .video-container {
     height: auto;
     fill: #fff;
     filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+    transition: opacity 0.4s ease;
 }
 
 /* --- Logo credits overlay --- */
 .logo-credits {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(33, 53, 37, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 2px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.4s ease;
+    padding: 6px 14px;
 }
 
 .logo-credits.visible {
     opacity: 1;
 }
 
+.credits-visible svg {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
 .logo-credits span {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     color: #fff;
     text-align: center;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     line-height: 1.4;
-    padding: 4px 8px;
 }
 
 @keyframes circle-pulse {
