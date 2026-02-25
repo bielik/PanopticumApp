@@ -1977,6 +1977,11 @@ body.worker-mode .video-container {
     line-height: 1.4;
 }
 
+.credits-name {
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
 @keyframes circle-pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.12); }
