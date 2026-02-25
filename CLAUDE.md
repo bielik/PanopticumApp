@@ -133,6 +133,7 @@ Key points:
 - Mobile responsive with breakpoints at 1200px, 1000px, 850px
 - Worker mode (`body.worker-mode`) hides all controls, fullscreen video, hidden cursor
 - Skipped log entries: `.message-log-item.skipped` — dimmed text + skip icon after timestamp
+- **Logo credits overlay** — clicking the PANOPTICUM logo (`.active-logo` on lobby/controller, `.worker-logo` on worker) shows "Created by Martin Bielik / with no bad intentions." for 5 seconds. The SVG fades out and text fades in via `.credits-visible` class toggled by JS. Uses `.clickable` class for custom cursor. Author name has glow effect (`.credits-name`). Implemented in `app.js` (controller/worker) and inline `<script>` in `lobby.html`.
 
 ## Important Patterns
 
