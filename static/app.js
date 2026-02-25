@@ -1862,6 +1862,16 @@
                         startSnapshotPolling();
                         startCtrlRipples();
                     };
+                    img.onerror = function () {
+                        // Snapshot not ready yet (204 or network error) — start polling anyway
+                        if (!isActive) return;
+                        if (circle) {
+                            circle.classList.remove("shrinking");
+                            circle.classList.add("active");
+                        }
+                        startSnapshotPolling();
+                        startCtrlRipples();
+                    };
                     img.src = "/room/" + ROOM + "/stream/snapshot?t=" + Date.now();
                 }, 600); // matches CSS transition duration
             } else {
